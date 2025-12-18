@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Deep Command</title>
+<title>Deep Command v1.0.0</title>
 <style>
   :root{
     color-scheme: dark;
@@ -480,7 +480,7 @@ html.audio-mute .audio-icon-svg .icon-slash{
 <body>
   <div class="page">
     <div class="linkBar">
-      <a class="label" href="https://ryosatoanime.github.io/Astrovader/" target="_blank" rel="noopener noreferrer">
+      <a class="label" href="https://ryosatoanime.github.io/RSG/index.html" target="_blank" rel="noopener noreferrer">
         Ryo Sato Games
       </a>
     </div>
@@ -1969,7 +1969,7 @@ function togglePauseNow(){
             break;
           case 'Enter':
             if (state === 'title') {
-              // iOS対策：タイトル開始は入力イベント内で直接実行（このタップ/キーでBGMも開始できる）
+              window.open("https://ryosatoanime.github.io/RSG/index.html", "_blank");} else {
               startFromTitle();
             } else {
               Actions.startRestart = true;
