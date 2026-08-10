@@ -70,7 +70,7 @@
     min-height: calc(100dvh - 120px);
   }
   .row {
-    max-width: 1100px;
+    max-width: 800px;
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -104,9 +104,17 @@
     position: fixed; inset-inline: 0; bottom:0;
     height: 56px;
     background: #cfcfcf;
-    display: flex; align-items: center; justify-content: flex-end;
-    /* 46px ボタン + 上下5px = 56px → 上・下・右の余白を 5px で揃える */
-    padding: 5px;
+    padding: 5px 24px;
+  }
+
+  .ribbon-inner {
+    width: 100%;
+    max-width: 800px;
+    height: 100%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
   }
   .yt-link {
   width: 46px;
@@ -160,6 +168,10 @@
   color: #f10;
 }
 
+.rcp-red{
+  color: #b12;
+}
+
 .t-ita{
     font-style: italic
   }
@@ -202,7 +214,7 @@
 
 <style>
 .rows{
-  width: min(980px, calc(100vw - 48px));
+  width: min(800px, calc(100vw - 48px));
   margin: 0 auto;
   display: grid;
   gap: 36px;
@@ -220,9 +232,28 @@
 .play-btn{ justify-self: end; width: 100%; text-align: center; }
 
 .row{
-  grid-template-columns: 2.5fr 0.8fr;
+  grid-template-columns: 2.5fr 0.7fr;
 }
 .play-btn{ width:100%; }
+
+/* 派生ゲーム: 小型テキストリンク */
+.row--variant {
+  grid-template-columns: 1fr;
+  min-height: 0;
+}
+
+.variant-link {
+  justify-self: start;
+  font-family: -apple-system, Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  font-size: clamp(15px, 2.8vw, 20px);
+  letter-spacing: .6px;
+  line-height: 0;
+  transition: opacity .15s ease;
+}
+
+.variant-link:hover { opacity: .75; }
+.variant-link:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
 
 </style>
 
@@ -251,25 +282,25 @@
   <div class="rows">
 
 <div class="row"
-     style="--btn-bg:#fff; --btn-fg:#000; --btn-border:#fff;">
+     style="--btn-bg:#0ff; --btn-fg:#000; --btn-border:#0ff;">
   <div class="title">Astrovader</div>
   <a class="play-btn" href="./astro/Astrovader.html" role="button">Play</a>
 </div>
 
-<div class="row"
-     style="--btn-bg:#f10; --btn-fg:#000; --btn-border:#f10;">
-  <div class="title">Astrovader <span class="t-stroke t1">FURY MODE</span></div>
-  <a class="play-btn" href="./astro/Astrovader FURY MODE.html" role="button">Play</a>
+<div class="row row--variant">
+  <a class="variant-link" href="./astro/Astrovader FURY MODE.html">
+    Astrovader <span class="t-stroke t1">FURY MODE</span>
+  </a>
+</div>
+
+<div class="row row--variant">
+  <a class="variant-link" href="./astro/Astrovader Reflection.html">
+    Astrovader <span class="t-stroke t2">Reflection</span>
+  </a>
 </div>
 
 <div class="row"
-     style="--btn-bg:#17cbe3; --btn-fg:#000; --btn-border:#17cbe3;">
-  <div class="title">Astrovader <span class="t-stroke t2">Reflection</span></div>
-  <a class="play-btn" href="./astro/Astrovader Reflection.html" role="button">Play</a>
-</div>
-
-<div class="row"
-     style="--btn-bg:#fff; --btn-fg:#000; --btn-border:#fff;">
+     style="--btn-bg:#f60; --btn-fg:#000; --btn-border:#f60;">
   <div class="title">Deep Command</div>
   <a class="play-btn" href="./dc/DeepCommand.html" role="button">Play</a>
 </div>
@@ -280,33 +311,45 @@
   <a class="play-btn" href="./jln/jaloon.html" role="button">Play</a>
 </div>
 
-<div class="row"
-     style="--btn-bg:#f10; --btn-fg:#000; --btn-border:#f10;">
-  <div class="title">JALOON <span class="t-red">IN LIMBO</span></div>
-  <a class="play-btn" href="./jln/jaloon_lmb.html" role="button">Play</a>
+<div class="row row--variant">
+  <a class="variant-link" href="./jln/jaloon_lmb.html">
+    JALOON <span class="t-red">IN LIMBO</span>
+  </a>
 </div>
-    
+
 <div class="row"
      style="--btn-bg:#000; --btn-fg:#fff; --btn-border:#fff;">
-  <div class="title"><span class="t-ita">MIDNIGHT</span> <span class="t-stroke MB-ita">BLACKTOP</span></div>
+  <div class="title"><span class="t-ita">MIDNIGHT</span><span class="t-stroke MB-ita">BLACKTOP</span></div>
   <a class="play-btn" href="./mb/midnightblacktop.html" role="button">Play</a>
+</div>
+
+<div class="row"
+     style="color:#fff; --btn-bg:#f0f; --btn-fg:#000; --btn-border:#f0f;">
+  <div class="title">AR<span class="t-stroke t2">SAM</span></div>
+  <a class="play-btn" href="./arsam/index.html" role="button">Play</a>
+</div>
+
+<div class="row"
+     style="color:#fff; --btn-bg:#b12; --btn-fg:#000; --btn-border:#b12;">
+  <div class="title"><span class="rcp-red">RC</span>Pinball</div>
+  <a class="play-btn" href="./rcp/index.html" role="button">Play</a>
 </div>
     
   </div>
 </main>
 
 <div class="ribbon" role="contentinfo">
-  <a class="yt-link" href="https://www.youtube.com/channel/UCL4OlV-ENGAmArx9-Uhtb7A" aria-label="YouTube channel">
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <polygon points="6,4 21,12 6,21" fill="#fff"/>
-    </svg>
-  </a>
+  <div class="ribbon-inner">
+    <a class="yt-link" href="https://www.youtube.com/channel/UCL4OlV-ENGAmArx9-Uhtb7A" aria-label="YouTube channel">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <polygon points="6,4 21,12 6,21" fill="#fff"/>
+      </svg>
+    </a>
 
-
-
-  <a class="x-link" href="https://x.com/RyoSatoAnime" aria-label="X profile">
-    <img src="/RSG/svg/X_logo.svg" width="26" height="26" alt="" aria-hidden="true" decoding="async" />
-  </a>
+    <a class="x-link" href="https://x.com/RyoSatoAnime" aria-label="X profile">
+      <img src="/RSG/svg/X_logo.svg" width="26" height="26" alt="" aria-hidden="true" decoding="async" />
+    </a>
+  </div>
 </div>
 
 </body>
