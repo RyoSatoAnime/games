@@ -1,0 +1,1959 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>ARSAM</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:opsz,wght@8..144,100;8..144,300;8..144,500;8..144,900&display=swap" rel="stylesheet">
+<style>
+  
+  /* ===== Mobile zoom/scroll lock (prevents accidental pinch/double-tap zoom while using on-screen controls) ===== */
+  html, body{
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
+  canvas{
+    touch-action: none;            /* allow our own pointer/touch handling without browser gestures */
+  }
+  button, .btn, .mobileBtn, .ui-btn{
+    touch-action: manipulation;    /* prevent double-tap zoom on buttons */
+  }
+:root{ color-scheme: dark; --shell-version: "v0.3"; }
+  html,body{ margin:0; background:#000; color:#fff; font-family: 'Roboto Flex', system-ui, sans-serif; }
+  .page{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:12px 0 0 ;}
+  html.is-mobile-platform .page{ padding-top:4px; }
+
+  /* ===== Link bar (desktop) ===== */
+  .linkBar{
+    width:600px; max-width:100%;
+    margin:6px auto 4px !important;
+    text-align:center; color:#fff;
+  }
+  .linkBar .label{
+    font-family: 'Roboto Flex', system-ui, sans-serif;
+    font-weight:700; font-size:16px; line-height:1.1;
+    text-decoration:none; color:#fff;
+    display:inline-block; padding-bottom:9px;
+  }
+  html.is-mobile-platform .linkBar{ display:none; }
+
+  .linkBar{ position:relative; }
+
+  /* ===== Canvas wrap ===== */
+  .mobileScaleRoot{ width:600px; max-width:100%; margin:0 auto; }
+  html.is-mobile-platform .mobileScaleRoot{ width: min(96vmin, 100%, 600px); }
+
+  .stageWrap{
+    width:600px; max-width:100%;
+    margin:6px auto 0;
+    display:flex; justify-content:center;
+  }
+  html.is-mobile-platform .topbar,
+  html.is-mobile-platform .stageWrap,
+  html.is-mobile-platform .pad{ width:100%; }
+
+  canvas#game{
+    width:600px; height:auto;
+    image-rendering: pixelated;
+    background:#000; border:1px solid #fff;
+    display:block; touch-action:none; outline:none;
+  }
+  html.is-mobile-platform canvas#game{ width:100%; height:auto; }
+
+  /* ===== Topbar (mobile) ===== */
+  .topbar{
+    width:600px; max-width:100%;
+    margin:6px auto 8px;
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .square-btn{
+    min-width:64px;
+    padding:10px 16px;
+    background:transparent;
+    border:2px solid #fff;
+    border-radius:10px;
+    color:#fff;
+    font-family: 'Roboto Flex', system-ui, sans-serif;
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:0.03em;
+    cursor:pointer;
+  }
+  html.is-mobile-platform .topbar{ display:flex; gap:8px; }
+  html.is-mobile-platform .topbar button{ flex:0 1 auto; }
+  html.is-mobile-platform .topbar .square-btn{ height:60px; display:flex; align-items:center; justify-content:center; padding:0 14px; }
+  html.is-mobile-platform #btnTitle, html.is-mobile-platform #btnMute{ flex:0 0 56px; aspect-ratio:1/1; }
+  html.is-mobile-platform #btnHowto{ flex:1 1 auto; white-space:nowrap; text-align:center; font-size:16px; }
+
+  /* ===== Desktop controls hint line ===== */
+  #controls{
+    width:600px; max-width:100%;
+    margin:16px auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    white-space:nowrap;
+    font:14px 'Roboto Flex', system-ui, sans-serif;
+    user-select:none;
+  }
+  html.is-mobile-platform #controls{ display:none; }
+
+  /* ===== Mobile pad ===== */
+  .pad{
+    width:600px; max-width:100%;
+    margin:10px auto 0;
+    display:none;
+    grid-template-columns: 1fr 1fr 2fr;
+    grid-auto-rows: 80px;
+    column-gap:10px;
+  }
+  html.is-mobile-platform .pad{ display:grid; }
+
+  .pad .half{
+    height:80px;
+    border:2px solid #fff;
+    border-radius:14px;
+    display:grid;
+    place-items:center;
+    background:#000;
+    touch-action:manipulation;
+    user-select:none;
+    color:#fff;
+    font:700 28px/1 'Roboto Flex', system-ui, sans-serif;
+  }
+  .pad .half:active{ transform:translateY(1px); }
+
+  #btnPadMoveL  { grid-column:1; grid-row:1; }
+  #btnPadMoveR  { grid-column:2; grid-row:1; }
+  #btnPadSelect { grid-column:3; grid-row:1; }
+
+  /* move icons */
+  .arrow-move{ display:flex; align-items:center; justify-content:center; width:100%; height:100%; }
+  .arrow-move svg{ width:40px; height:40px; }
+  .pad-label{ display:block; line-height:1; }
+
+  /* ===== Audio icon system ===== */
+  
+  #audioIconSlot{
+    display:inline-block;
+    position:relative;
+    width:1.4em;
+    height:1.3em;
+    vertical-align:middle;
+    transform:translateY(-1px);
+  }
+  #audioIconSlot svg{ position:absolute; inset:0; width:100%; height:100%; }
+  #ctrlSlash{ display:none; }
+  #ctrlNote{ transform: translateY(-2px); }
+
+  .audio-icon-svg .icon-speaker,
+  .audio-icon-svg .speaker-wave,
+  .audio-icon-svg .icon-note,
+  .audio-icon-svg .icon-slash{ display:none; }
+
+  html.audio-all .audio-icon-svg .icon-speaker{ display:inline; }
+  html.audio-all .audio-icon-svg .speaker-wave{ display:inline; }
+
+  html.audio-bgmoff .audio-icon-svg .icon-note{ display:inline; }
+  html.audio-bgmoff .audio-icon-svg .icon-slash{ display:inline; }
+
+  html.audio-mute .audio-icon-svg .icon-speaker{ display:inline; }
+  html.audio-mute .audio-icon-svg .speaker-wave{ display:inline; }
+  html.audio-mute .audio-icon-svg .icon-slash{ display:inline; }
+
+  .audio-icon-svg .icon-speaker{ transform: translateX(1px); }
+  .audio-icon-svg .icon-note-wrap{ transform: translateX(0px) scaleX(1.25); transform-origin:50% 50%; }
+
+  canvas#game, .square-btn, .pad .half{
+    touch-action:none;
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  /* ===== HowTo overlay ===== */
+  #howtoOverlay{
+    display:none; position:fixed; inset:0; z-index:9999;
+    background: rgba(0,0,0,0.65);
+  }
+  #howtoOverlay .howto-panel{
+    position: fixed;
+    left: 50vw; top: 50vh;
+    transform: translate(-50%,-50%);
+  }
+  .howto-panel{
+    box-sizing:border-box;
+    width:auto;
+    margin:0 auto;
+    background:rgba(0,0,0,0.55);
+    border:2px solid #fff; border-radius:12px;
+    padding:28px 22px 24px;
+    transform:none;
+  }
+  .howto-title{
+    margin: 0 0 10px;
+    font-family: 'Roboto Flex', system-ui, sans-serif;
+    text-align:center;
+    line-height:1.05;
+    font-weight:700;
+    overflow-wrap:anywhere;
+  }
+  .howto-title.en{ font-size:28px; }
+  .howto-title.ja{ font-size:26px; }
+
+  .howto-pre{
+    margin: 16px auto 0;
+    white-space: pre-wrap;
+    line-height:1.45;
+    font-family: 'Roboto Flex', system-ui, sans-serif;
+  }
+  .howto-footer{
+    text-align:center;
+    margin-top:1.1em;
+    font-size:14px;
+    opacity:0.7;
+  }
+
+  .howto-score-guide{
+    margin:18px auto 0;
+    font-family:'Roboto Flex', system-ui, sans-serif;
+    font-size:14px;
+    line-height:1.2;
+    text-align:center;
+  }
+  .howto-score-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .howto-score-item{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    white-space:nowrap;
+  }
+  .howto-score-sprite{
+    display:inline-block;
+    width:16px;
+    height:16px;
+    flex:0 0 16px;
+    background-image:url('arSprites.png');
+    background-repeat:no-repeat;
+    image-rendering:pixelated;
+  }
+  .howto-score-sprite.enemy-a{ background-position:0 -16px; }
+  .howto-score-sprite.enemy-b{ background-position:0 -112px; }
+  .howto-score-sprite.enemy-c{ background-position:0 -144px; }
+  .howto-score-sprite.seeker{ background-position:0 -192px; }
+  .howto-score-sprite.orb{ background-position:0 -64px; }
+  .howto-score-sprite.remnant{ background-position:0 -80px; }
+  .howto-score-sprite.orb,
+  .howto-score-sprite.remnant{
+    width:8px;
+    flex-basis:8px;
+  }
+  .howto-chain-row{
+    margin-top:12px;
+    white-space:nowrap;
+  }
+
+  #howtoOverlay .howto-panel{ position: relative; overflow: visible; }
+  #howtoOverlay .howto-panel::after{
+    content: var(--shell-version);
+    position: absolute;
+    right: 8px;
+    bottom: -18px;
+    display: block;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 1;
+    opacity: .6;
+    pointer-events: none;
+  }
+
+  /* PC */
+  @media (pointer: fine) and (min-width:821px){
+    #howtoOverlay{ padding-top:55px; }
+    .howto-panel{ margin:0 auto; width:fit-content; max-width:86vw; }
+    .howto-pre.en, .howto-pre.ja{ font-size:18px; }
+  }
+  /* Mobile */
+  @media (pointer: coarse), (max-width: 820px){
+    .howto-panel{ width:min(89vw, 680px); padding:24px 18px 20px; }
+    .howto-pre.en, .howto-pre.ja{ font-size:17px; }
+  }
+</style>
+</head>
+<body>
+  
+  <!-- Hidden outbound link for mobile-safe target=_blank navigation -->
+  <a id="rsgOutboundLink" href="https://ryosatoanime.github.io/RSG/index.html" target="_blank" rel="noopener noreferrer" style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;">RSG</a>
+<div class="page">
+    <div class="linkBar">
+      <a class="label" href="https://ryosatoanime.github.io/RSG/index.html" target="_blank" rel="noopener noreferrer">Ryo Sato Games</a>
+    </div>
+
+    <div class="mobileScaleRoot">
+      <div class="topbar">
+        <button id="btnTitle" class="square-btn">Title</button>
+        <button id="btnHowto" class="square-btn">How To Play</button>
+        <button id="btnMute" class="square-btn" aria-label="Mute / Audio">
+          <span class="iconMobileSpeaker" aria-hidden="true">
+            <svg class="audio-icon-svg" viewBox="0 0 24 24" aria-hidden="true" style="width:2.1em; height:2.1em; display:block;">
+              <g class="icon-speaker">
+                <polygon points="4,9 8,9 12,6 12,18 8,15 4,15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+                <path d="M14 9 Q17 12 14 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                <path d="M16 7 Q21 12 16 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </g>
+              <g class="icon-note-wrap">
+              <g class="icon-note" transform="translate(1 2) scale(0.08)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="22">
+                <circle cx="180" cy="172" r="28"></circle>
+                <circle cx="74" cy="204" r="28"></circle>
+                <polyline points="104 204 104 64 208 32 208 172"></polyline>
+                <polyline points="104 104 208 72"></polyline>
+              </g>
+              </g>
+              <line class="icon-slash" x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </span>
+        </button>
+      </div>
+
+      <div class="stageWrap">
+        <canvas id="game" width="600" height="600" aria-label="RSG shell game surface"></canvas>
+      </div>
+
+      <div id="controls">
+        <span>
+          A / D, ← / →: Move | ↓ : Shoot | Enter : Start | Space : Pause | H : HowTo | M :
+          <span id="audioIconSlot">
+            <svg id="ctrlNote" viewBox="0 0 256 256" aria-hidden="true">
+              <circle cx="180" cy="192" r="28" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></circle>
+              <circle cx="68"  cy="224" r="28" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="24"></circle>
+
+              <polyline fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="24" points="96 224 96 84 208 52 208 192"></polyline>
+
+              <polyline fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="24" points="96 124 208 92"></polyline>
+            </svg>
+            <svg id="ctrlSpeaker" viewBox="0 0 24 24" aria-hidden="true">
+              <polygon points="4,9 8,9 12,6 12,18 8,15 4,15"
+                       fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></polygon>
+              <path d="M14 9 Q17 12 14 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+              <path d="M16 7 Q21 12 16 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            </svg>
+            <svg id="ctrlSlash" viewBox="0 0 24 24" aria-hidden="true">
+              <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line>
+            </svg>
+          </span>
+        </span>
+      </div>
+
+      <div class="pad" aria-label="Move & Action pad">
+        <button id="btnPadMoveL" class="half" aria-label="Move Left">
+          <span class="arrow arrow-move" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><polygon points="18,5 4,12 18,19" fill="#fff" stroke="#fff" stroke-width="2"/></svg>
+          </span>
+        </button>
+        <button id="btnPadMoveR" class="half" aria-label="Move Right">
+          <span class="arrow arrow-move" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><polygon points="6,5 20,12 6,19" fill="#fff" stroke="#fff" stroke-width="2"/></svg>
+          </span>
+        </button>
+        <button id="btnPadSelect" class="half" aria-label="Select / Shoot">
+          <span class="arrow arrow-move" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <polygon points="5,18 12,4 19,18" fill="#fff" stroke="#fff" stroke-width="2"/>
+            </svg>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HowTo Overlay -->
+  <div id="howtoOverlay" aria-hidden="true">
+    <section class="howto-panel" role="dialog" aria-modal="true" aria-labelledby="howtoTitleEN">
+      <h2 class="howto-title en" id="howtoTitleEN">Chain Kill or Be Killed</h2>
+      <pre class="howto-pre en">One shot can trigger chain explosions.
+Large chains award bonus points and build MULT.
+Enemy kills and item pickups score more based on MULT.
+Collect magenta pickups to recover AMMO.
+</pre>
+      <pre class="howto-pre ja">1発のショットから連鎖爆発
+大連鎖でボーナス獲得・MULT上昇
+敵撃破とアイテム取得は、MULTに応じて得点増加
+紫アイテム取得でAMMO回復
+</pre>
+
+      <div class="howto-score-guide" aria-label="Score guide">
+        <div class="howto-score-row">
+          <span class="howto-score-item"><span class="howto-score-sprite enemy-a" aria-hidden="true"></span><span>1pt</span></span>
+          <span class="howto-score-item"><span class="howto-score-sprite enemy-b" aria-hidden="true"></span><span>2pt</span></span>
+          <span class="howto-score-item"><span class="howto-score-sprite enemy-c" aria-hidden="true"></span><span>3pt</span></span>
+          <span class="howto-score-item"><span class="howto-score-sprite seeker" aria-hidden="true"></span><span>4pt</span></span>
+          <span class="howto-score-item"><span class="howto-score-sprite orb" aria-hidden="true"></span><span>5pt</span></span>
+          <span class="howto-score-item"><span class="howto-score-sprite remnant" aria-hidden="true"></span><span>10pt &amp; 5Ammo</span></span>
+        </div>
+        <div class="howto-chain-row">5 Chain : +1 Mult&nbsp;&nbsp;&nbsp; 10 : +2&nbsp;&nbsp;&nbsp; 15 : +3&nbsp;&nbsp;&nbsp; 20 : +4</div>
+      </div>
+
+      <div class="howto-footer">Click or Tap to close</div>
+    </section>
+  </div>
+
+<!--
+  ARSAM standalone — script dependency map
+
+  REQUIRED for ARSAM play loop (TITLE → PLAY → RESULT / RECORDS):
+  - ar_sfx.js          … window.AR_SFX.play(...) during run
+  - arsam_state.js     … window.ARSAM gameplay (step / render / consumeExit)
+  - arsam.html inline  … input shell, blip SFX, main loop, ARSAM:records I/O, ARSAM_DEFAULT_RUN_CFG
+
+  REMOVED (Astral Remnant Base / Sortie legacy — no longer included):
+  - game_defs.js
+  - buildRunCfg.js
+  - progress_logic.js
+  - research_logic.js
+  - reload_logic.js
+  - save_logic.js
+  - ui_render_helpers.js
+  - sortie_state.js
+
+  Next deletion candidates:
+  - App mirror full removal if input routing no longer needs it
+  - Base/i18n unused strings
+  - HowTo text cleanup later
+-->
+<script src="ar_sfx.js"></script>
+<script src="./arsam_bgm_song.js"></script>
+<script src="./arsam_bgm.js"></script>
+<script src="arsam_state.js"></script>
+
+<script>
+
+(() => {
+  /** ARSAM standalone shell (arsam.html). When true: no Base meta/reload/research I/O; App is input mirror only. */
+  const ARSAM_STANDALONE_SHELL = true;
+
+  /** ARSAM standalone debug: invincible toggle (V). Not persisted; synced to window.ARSAM on change. */
+  let arsamDebugInvincible = false;
+
+  function applyArsamDebugInvincibleState(){
+    if (window.ARSAM && typeof window.ARSAM.setDebugInvincible === 'function'){
+      window.ARSAM.setDebugInvincible(arsamDebugInvincible);
+    }
+  }
+
+  // ===== Mobile platform detection =====
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(navigator.userAgent);
+  const isMobilePlatform = isIOS || isAndroid;
+  if (isMobilePlatform) document.documentElement.classList.add("is-mobile-platform");
+
+  // ===== Canvas & DPR scaling =====
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d', { alpha:false });
+  const DOT_W = 192;
+  const DOT_H = 192;
+  const DOT_SCALE = 3;
+  const DOT_DRAW_X = 12;
+  const DOT_DRAW_Y = 12;
+  const DOT_DRAW_W = DOT_W * DOT_SCALE;
+  const DOT_DRAW_H = DOT_H * DOT_SCALE;
+  const dotCanvas = document.createElement('canvas');
+  dotCanvas.width = DOT_W;
+  dotCanvas.height = DOT_H;
+  const dotCtx = dotCanvas.getContext('2d', { alpha:false });
+  dotCtx.imageSmoothingEnabled = false;
+
+  const AR_UI_ICON_SHEET_SRC = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAALQCAMAAACnsaC0AAAAAXNSR0IArs4c6QAAABhQTFRFAAAA/////wARAHf///8A/wD//5kzAAAAP9gBJAAAAAh0Uk5TAP/////////VylQyAAAG6ElEQVRoge1a25IrOQhrnvj/P96qGSMkwE53MnPObtVmrlFkGwuMsZPLh8f1P/ivAm14fIFCW2DFtmDDnoH3B5rB0fgHYEUfgrcHmo0f3fFbPlovpjvMvrCvL2bGbNNHthhuZSD6+5aP6O8ClzVryEtsUXfAJlMfWU74j/toqal9AiSVhBjKCzFBski8qT6KmZu6w0LWBopJMSheP4EOrPlIlE/TFczJ+0G6StxKd99H1N0KtIs0BxrMb7AyI/iEycF7cY+BfjMTlD7XDIUJMJme+nowV7voJfqkqAHTcu5ryTgRV68XEUG9TIjfjG+QfLzA9njko+gdEi+TJFs5MV3c4a39ks6hQDJrDrxYXnJHRDdQMT7WGEzi9VCWDId3XV5XpD6nBlckunDAUimcbJEgMryT6skEe2Q+9RF/ZYRQson4RP4KucObwXFIh+WHJXYaCO09pTszMXpaKGBuSGQn+ZhmlD5LkYe551LYzOjVNAl8ax3RvhGOOzKdwTPTGTwzncEz0xk8M53BM9MZPDOdwTNTch0zh8dLH0mfhRd5Xni+dkPhZbIinpts0JLWcvkLiF1FQN57aUZDc+FqqvQO2ggaTbNxq54jaPOSeXsdTX7/AOR5wu8UTx4ulsZtdfxk8/dV+rvgr/mIa9qD47hIf8FkwwlMB72KEGn/15W/D+7nPoAu2BEc3TE77jcipI+uE/9P+SgKRfyMYOwyzPMBRKkpPO99Blh4rc8EC6/0yWDhSZ8KFh71WcHCQ58DqJDLob72eddHJeoOzZU5V4BZqVKXvmUmNd0xxjwmlyK8SID065QEQHqdGSglv0gXnMRLVQlwI/IAjs0z/kMWgHFcFZDzGDFdThNTXqIzQx5sG3W4B8OMBnBsPg00mjQbf5rmKIhK95mPqF10tDl3/Amm17Apxlc9O5Wr9M70iWkjcz7LjEw+MFrjtrDpzLE5g9EO7V+BzqBvQVPQTyCs9yPIrfkmKlucQMF6VUmpUjDKydRLOf53x2WDH7mvS+/eAefm/gvMlyAe49xnQQZwI91HzCcmTTO6M/cq6UbkgbpPAnf7nJo/9hF3chJZjd2kyk58p88f9ZHzWs28FNuuMqv4WcJVkcXIY5/l3afnPsLzIghqhnpnlQeHanu90KjMfZ9t9M99NDT3KOlpg6Yq/7jtGn+fNn1LXsY8a5J7R15z91WMvcNQ0qeLjTk5OpkqgvBvrvw1ljQSyh43iPyxj7rII8iy8AYtpTsb2kEcEvU0wQccctAMWgXtLmgDaANIUdpKTXKHRGk73E3ueO6j8i4I3VHreyM4MOJNrP3pbONi1Rkz4qBnkH9+C3QGnOtkWmS7g5jP7+3iFiZOT7t3q+/7yGgJ4MMYdAT7Hh45ZEVPpCAzlyUfiYWbO06R5M04RWJLMmTF1Q+hADNA7CGTUboL6ibNxk/TnAWZpJtFvu2jGDX/0I5AW+fmNiZ54OZ75TA44jNuyCy2nsSArpgPC/nDA2k3f3iggWPzaaDZpNH4cZobQUbpNiLfXEc5R4zOoZDrPSzC2qbjKha8NxAmUetq5wjq6DOI1EPGU0LSUFS0gNEngzCJEp+A1kCrXbramQM98BENTxdZKQnyp89MCWRkG5gql2OdyVS5r9Ne1+iS/adbo9RTtL4yb5W5LyNLLBUL+IrbkkkRp8zg0oIt4fU017EnqLYJOIuTEguuQdvDW1Vi5QzSIU0gxVy0IVBioSe5YCmlRIuLn4RnLuQtyk/0PkKg9SgkLu7TnASJdZXXsCEyFw5P6zoMTesdYWtpPPZ33nZjqYQNfDlmyPN7k1wHiuIkmsZ/OAJb7r9bcGo+DrQJ2sH4zTQnQSbpRpEf+GiWbijIO5Y5hH4k29Bm6u2xbz4wZ7BmqzdOfNLFGwfGu3bq9xtnWCQBiXmXTMszMmVGycOhiHTMTBiZzMhH6U0Qkyq7TGYwrolNq8q083hGEBC1Nz3OflfmM8c99RGaKlPAPVOw3UUB1X7tnoG6mfI8XWgocw9O24SMQ9sulWeZPwc96zSt8Mrta1H+x3yEk6nWw0cfxbPcDdVES+WtgiDqDovdQJirZLIKfq+RCrbmaWQZiCxqlSqYauRR+SISKpaf8FGWxFYVbcVzXn3Irh3MpKx/srZxBxyH0Bwe1+YyTVQCjPqOaRPT6kDJTJO05MBSzJQev1BZqYur8hneem/04Tp6c4skWWgdpWFI/mQudoSsQmhHoNoE1ync3rpKCLACxibF4vEnndgDF++XsX/2yr9lRUrpd0W+7yMqFkUQlxcQ8wzl9RReMFSAAsXlWHABenJpFcOPliCfLirTBTwxpz6n0Sc7UYzQjKa5p0rlVjMrpJ07/gGGBdUT80nEsAAAAABJRU5ErkJggg==';
+  const AR_UI_ICON_SHEET = (() => {
+    if (typeof Image === 'undefined') return null;
+    const img = new Image();
+    img.src = AR_UI_ICON_SHEET_SRC;
+    return img;
+  })();
+  const AR_UI_ICON_SIZE = 20;
+
+  function syncPixelRatio(){
+    const DPR = window.devicePixelRatio || 1;
+    const W = 600, H = 600;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    ctx.imageSmoothingEnabled = false;
+  }
+  let resetLoopClock = null;
+  let canvasResyncQueued = false;
+  function refreshRenderCachesAfterResume(){
+    if (window.ARSAM && typeof window.ARSAM.invalidateRenderCaches === 'function'){
+      window.ARSAM.invalidateRenderCaches();
+    }
+  }
+  function scheduleCanvasResync(){
+    if (canvasResyncQueued) return;
+    canvasResyncQueued = true;
+    requestAnimationFrame(()=>{
+      canvasResyncQueued = false;
+      syncPixelRatio();
+      refreshRenderCachesAfterResume();
+      if (resetLoopClock) resetLoopClock();
+      setTimeout(()=>{
+        syncPixelRatio();
+        refreshRenderCachesAfterResume();
+        if (resetLoopClock) resetLoopClock();
+      }, 80);
+    });
+  }
+  syncPixelRatio();
+  window.addEventListener('resize', scheduleCanvasResync);
+  window.addEventListener('orientationchange', scheduleCanvasResync);
+  window.addEventListener('pageshow', scheduleCanvasResync);
+  document.addEventListener('visibilitychange', ()=>{
+    if (document.visibilityState === 'visible') scheduleCanvasResync();
+  });
+  if (window.visualViewport){
+    window.visualViewport.addEventListener('resize', scheduleCanvasResync);
+  }
+
+  // ===== Actions（デバイス非依存の意味ベース入力） =====
+  const Actions = {
+    moveLeft:false, moveRight:false,
+    actionLeft:false, actionRight:false,
+    select:false,
+    back:false,
+    abort:false,
+    soundToggle:false, howToPlay:false,
+    pause:false
+  };
+
+  /**
+   * ARSAM standalone app state (authoritative shell FSM).
+   * App.scene / App.combatMode are legacy input-routing mirrors only — not the source of truth.
+   *
+   * Flow:
+   *   TITLE ──select──► PLAY ──ARSAM.consumeExit──► RESULT ──select──► PLAY (retry)
+   *     │                    │                              │
+   *     └── L/R ──► RECORDS ─┴── back / Esc ────────────────┴──► TITLE
+   *
+   * Mirror side effects (unchanged this step):
+   *   PLAY   → App.scene='shooting', App.combatMode='sam'
+   *   else   → App.scene='arsam',    App.combatMode=null
+   *
+   * Persistence: ARSAM:records only. Base keys (ARSAM:meta / reload / research) are not
+   * read or written while ARSAM_STANDALONE_SHELL is true (Step 2).
+   */
+  const ARSAM_APP_STATE = Object.freeze({
+    TITLE: 'title',
+    PLAY: 'play',
+    RESULT: 'result',
+    RECORDS: 'records',
+  });
+  let arsamAppState = ARSAM_APP_STATE.TITLE;
+  let lastResult = null;
+  let titleFrame = 0;
+  let IMG_ARSAM_TITLE = null;
+  let arsamPaused = false;
+
+  /** keyboard の左右移動（Sortie 時は GamepadInput.hold* と合成する） */
+  const KeyMove = { left:false, right:false };
+  /** shooting 中の ArrowDown 押下（Gamepad の select hold と合成する） */
+  let kbSelectHeld = false;
+  /** mobile pad の shooting 中 hold 専用（keyboard / gamepad と別軸） */
+  const MobilePadInput = {
+    moveLeft: false,
+    moveRight: false,
+    select: false
+  };
+  function consumeAction(flag){
+    if (Actions[flag]) { Actions[flag] = false; return true; }
+    return false;
+  }
+
+  /** 決定・進行（メニュー / UI / Sortie 主操作）— keyboard・gamepad・mobile 共通 */
+  function routeSelectInput(pressed){
+    Actions.select = !!pressed;
+  }
+
+  /** Escape: PLAY 中は緊急タイトル復帰、RESULT / RECORDS ではタイトルへ */
+  function routeArsamEscape(){
+    if (arsamAppState === ARSAM_APP_STATE.PLAY){
+      arsamEmergencyExitToTitle();
+      return;
+    }
+    if (arsamAppState === ARSAM_APP_STATE.RESULT) Actions.back = true;
+    if (arsamAppState === ARSAM_APP_STATE.RECORDS) Actions.back = true;
+  }
+
+  // ===== Keyboard =====
+  window.addEventListener('keydown', (e)=>{
+    const k = e.key;
+
+    switch (k) {
+
+      // --- 移動 ---
+      case 'a': case 'A':
+        KeyMove.left = true;
+        Actions.moveLeft = true;
+        e.preventDefault();
+        break;
+
+      case 'd': case 'D':
+        KeyMove.right = true;
+        Actions.moveRight = true;
+        e.preventDefault();
+        break;
+
+      case 'ArrowLeft':
+        if (typeof App !== 'undefined' && App && App.scene === 'shooting') {
+          KeyMove.left = true;
+          Actions.moveLeft = true;
+        } else {
+          Actions.actionLeft = true;
+        }
+        e.preventDefault();
+        break;
+
+      case 'ArrowRight':
+        if (typeof App !== 'undefined' && App && App.scene === 'shooting') {
+          KeyMove.right = true;
+          Actions.moveRight = true;
+        } else {
+          Actions.actionRight = true;
+        }
+        e.preventDefault();
+        break;
+
+      case 'Escape':
+        routeArsamEscape();
+        e.preventDefault();
+        break;
+    
+      // --- UI ---
+      case 'ArrowDown':
+        // TITLE ではゲーム開始入力にしない（Enter / pad / canvas 開始は維持）
+        if (arsamAppState === ARSAM_APP_STATE.TITLE){
+          e.preventDefault();
+          break;
+        }
+        if (typeof App !== 'undefined' && App && App.scene === 'shooting') kbSelectHeld = true;
+        routeSelectInput(true);
+        e.preventDefault();
+        break;
+      case 'Enter':
+        routeSelectInput(true);
+        e.preventDefault();
+        break;
+
+      case ' ':
+      case 'Spacebar':
+        if (arsamAppState === ARSAM_APP_STATE.PLAY){
+          Actions.pause = true;
+        }
+        e.preventDefault();
+        break;
+
+      case 'm': case 'M':
+        Actions.soundToggle = true;
+        e.preventDefault();
+        break;
+
+      case 'h': case 'H':
+        Actions.howToPlay = true;
+        e.preventDefault();
+        break;
+
+      case 'v': case 'V':
+        arsamDebugInvincible = !arsamDebugInvincible;
+        applyArsamDebugInvincibleState();
+        blip(arsamDebugInvincible ? 880 : 220, 40, 0.08);
+        e.preventDefault();
+        break;
+      }
+  },
+  { passive:false });
+
+  window.addEventListener('keyup', (e)=>{
+    const k = e.key;
+    switch (k) {
+      case 'a': case 'A':
+        KeyMove.left = false;
+        if (typeof App !== 'undefined' && App && App.scene === 'shooting') {
+          syncShootingHoldActions();
+        } else {
+          Actions.moveLeft = KeyMove.left || GamepadInput.holdMoveLeft;
+        }
+        break;
+      case 'd': case 'D':
+        KeyMove.right = false;
+        if (typeof App !== 'undefined' && App && App.scene === 'shooting') {
+          syncShootingHoldActions();
+        } else {
+          Actions.moveRight = KeyMove.right || GamepadInput.holdMoveRight;
+        }
+        break;
+      case 'ArrowLeft':
+        KeyMove.left = false;
+        Actions.actionLeft = false;
+        if (typeof App !== 'undefined' && App && App.scene === 'shooting') {
+          syncShootingHoldActions();
+        } else {
+          Actions.moveLeft = KeyMove.left || GamepadInput.holdMoveLeft;
+        }
+        break;
+      case 'ArrowRight':
+        KeyMove.right = false;
+        Actions.actionRight = false;
+        if (typeof App !== 'undefined' && App && App.scene === 'shooting') {
+          syncShootingHoldActions();
+        } else {
+          Actions.moveRight = KeyMove.right || GamepadInput.holdMoveRight;
+        }
+        break;
+      case 'ArrowDown':
+        if (arsamAppState === ARSAM_APP_STATE.TITLE) break;
+        if (typeof App !== 'undefined' && App && App.scene === 'shooting') {
+          kbSelectHeld = false;
+          syncShootingHoldActions();
+        } else {
+          routeSelectInput(false);
+        }
+        break;
+    }
+  });
+  // (AR) Tap on canvas does not trigger start/restart. (Reserved for future shooting input.)
+  canvas.addEventListener('pointerdown', (e)=>{
+    e.preventDefault();
+
+    if (howtoVisible) return;
+
+    if (arsamAppState === ARSAM_APP_STATE.PLAY){
+      Actions.pause = true;
+    }
+  }, { passive:false });
+
+  // ===== Gamepad =====
+  const GamepadInput = {
+    deadzone: 0.25,
+    prevButtons: [],
+    holdMoveLeft: false,
+    holdMoveRight: false,
+    holdSelect: false,
+    prevStickSide: 0,
+    lastShooting: undefined,
+    getFirstPad(){
+      const list = navigator.getGamepads ? navigator.getGamepads() : [];
+      if (!list) return null;
+      for (let i = 0; i < list.length; i++) {
+        const gp = list[i];
+        if (gp && gp.connected) return gp;
+      }
+      return null;
+    },
+
+    poll(){
+      const isShooting = (typeof App !== 'undefined' && App && App.scene === 'shooting');
+      if (this.lastShooting !== isShooting) {
+        this.prevStickSide = 0;
+        this.lastShooting = isShooting;
+      }
+
+      const gp = this.getFirstPad();
+      if (!gp) {
+        this.prevButtons = [];
+        this.holdMoveLeft = false;
+        this.holdMoveRight = false;
+        this.holdSelect = false;
+        if (isShooting) {
+          syncShootingHoldActions();
+        }
+        return;
+      }
+
+      const btn = (i) => gp.buttons[i] && gp.buttons[i].pressed;
+      const was = (i) => this.prevButtons[i];
+      const justPressed = (i) => btn(i) && !was(i);
+      const dz = this.deadzone;
+      const lx = gp.axes[0] || 0;
+
+      if (isShooting) {
+        this.holdMoveLeft = (lx < -dz) || btn(14);
+        this.holdMoveRight = (lx > dz) || btn(15);
+        this.holdSelect = btn(0);
+        syncShootingHoldActions();
+
+        // button9: Pause
+        if (justPressed(9) && arsamAppState === ARSAM_APP_STATE.PLAY){
+          Actions.pause = true;
+        }
+
+        // button8: Title
+        if (justPressed(8)){
+          arsamEmergencyExitToTitle();
+        }
+
+        if (justPressed(3)) Actions.soundToggle = true;
+      } else {
+        this.holdMoveLeft = false;
+        this.holdMoveRight = false;
+        this.holdSelect = false;
+
+        const side = lx < -dz ? -1 : lx > dz ? 1 : 0;
+        if (this.prevStickSide === 0 && side === -1) Actions.actionLeft = true;
+        if (this.prevStickSide === 0 && side === 1) Actions.actionRight = true;
+        this.prevStickSide = side;
+
+        if (justPressed(14)) Actions.actionLeft = true;
+        if (justPressed(15)) Actions.actionRight = true;
+
+        if (justPressed(0)) routeSelectInput(true);
+        // button8: Title from RESULT / RECORDS etc.
+        // TITLEでは何もしない。RSG誤爆を避ける。
+        if (justPressed(8) && arsamAppState !== ARSAM_APP_STATE.TITLE){
+          arsamExitToTitleShell();
+        }
+        if (justPressed(3)) Actions.soundToggle = true;
+      }
+
+      this.prevButtons = gp.buttons.map(b => b && b.pressed);
+    }
+  };
+
+  function syncShootingHoldActions(){
+    Actions.moveLeft =
+      !!KeyMove.left ||
+      !!MobilePadInput.moveLeft ||
+      !!GamepadInput.holdMoveLeft;
+
+    Actions.moveRight =
+      !!KeyMove.right ||
+      !!MobilePadInput.moveRight ||
+      !!GamepadInput.holdMoveRight;
+
+    Actions.select =
+      !!kbSelectHeld ||
+      !!MobilePadInput.select ||
+      !!GamepadInput.holdSelect;
+  }
+
+  // ===== Mobile pad bindings =====
+  const mobilePad    = document.querySelector('.pad');
+  const btnPadMoveL  = document.getElementById('btnPadMoveL');
+  const btnPadMoveR  = document.getElementById('btnPadMoveR');
+  const btnPadSelect = document.getElementById('btnPadSelect');
+
+  if (isMobilePlatform) {
+
+    const clearPadMove = () => {
+      MobilePadInput.moveLeft = false;
+      MobilePadInput.moveRight = false;
+
+      if (typeof App !== 'undefined' && App && App.scene === 'shooting') {
+        syncShootingHoldActions();
+      } else {
+        Actions.moveLeft = false;
+        Actions.moveRight = false;
+      }
+    };
+
+    const setPadMoveByPoint = (clientX, clientY) => {
+      const target = document.elementFromPoint(clientX, clientY);
+      if (!target) {
+        clearPadMove();
+        lastPadNavSide = null;
+        return;
+      }
+
+      const moveL = target.closest && target.closest('#btnPadMoveL');
+      const moveR = target.closest && target.closest('#btnPadMoveR');
+
+      if (!moveL && !moveR) {
+        clearPadMove();
+        lastPadNavSide = null;
+        return;
+      }
+
+      const isShooting = (typeof App !== 'undefined' && App && App.scene === 'shooting');
+
+      // Sortie中だけ「押しっぱなし移動」
+      if (isShooting) {
+        lastPadNavSide = null;
+        MobilePadInput.moveLeft = !!moveL;
+        MobilePadInput.moveRight = !!moveR;
+        syncShootingHoldActions();
+        return;
+      }
+
+      // Base / Research / Archive では「左右UI操作」
+      // 同じボタン上に居続ける間は再発火しない
+      clearPadMove();
+
+      const side = moveL ? 'L' : 'R';
+      if (side === lastPadNavSide) return;
+
+      lastPadNavSide = side;
+
+      if (moveL) Actions.actionLeft = true;
+      if (moveR) Actions.actionRight = true;
+    };
+
+    let activePadPointerId = null;
+    let lastPadNavSide = null;
+
+    if (mobilePad) {
+      mobilePad.addEventListener('pointerdown', (e) => {
+        const t = e.target;
+        if (!(t instanceof Element)) return;
+
+        if (t.closest('#btnPadMoveL') || t.closest('#btnPadMoveR')) {
+          e.preventDefault();
+
+          activePadPointerId = e.pointerId;
+          lastPadNavSide = null;
+
+          if (mobilePad.setPointerCapture) {
+            try { mobilePad.setPointerCapture(e.pointerId); } catch (_) {}
+          }
+
+          setPadMoveByPoint(e.clientX, e.clientY);
+        }
+      }, { passive:false });
+
+      mobilePad.addEventListener('pointermove', (e) => {
+        if (e.pointerId !== activePadPointerId) return;
+        e.preventDefault();
+        setPadMoveByPoint(e.clientX, e.clientY);
+      }, { passive:false });
+
+      mobilePad.addEventListener('pointerup', (e) => {
+        if (e.pointerId !== activePadPointerId) return;
+
+        clearPadMove();
+        lastPadNavSide = null;
+        activePadPointerId = null;
+      });
+
+      mobilePad.addEventListener('pointercancel', (e) => {
+        if (e.pointerId !== activePadPointerId) return;
+
+        clearPadMove();
+        lastPadNavSide = null;
+        activePadPointerId = null;
+      });
+    }
+
+    if (btnPadSelect) {
+      btnPadSelect.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        const shooting = (typeof App !== 'undefined' && App && App.scene === 'shooting');
+        if (shooting) {
+          MobilePadInput.select = true;
+          syncShootingHoldActions();
+        } else {
+          routeSelectInput(true);
+        }
+      }, { passive:false });
+
+      const releaseSelect = () => {
+        if (typeof App !== 'undefined' && App && App.scene === 'shooting') {
+          MobilePadInput.select = false;
+          syncShootingHoldActions();
+        }
+      };
+
+      btnPadSelect.addEventListener('pointerup', releaseSelect);
+      btnPadSelect.addEventListener('pointercancel', releaseSelect);
+      btnPadSelect.addEventListener('pointerleave', releaseSelect);
+    }
+  }
+    
+  // ===== Top buttons =====
+  const btnTitle = document.getElementById('btnTitle');
+  const btnHowto = document.getElementById('btnHowto');
+  const btnMute  = document.getElementById('btnMute');
+
+
+  // Mobile: prevent "Title -> immediately open RSG link" double-trigger
+  let suppressTitleLinkUntil = 0;
+
+  function updateTitleButtonLabel(){
+    if (!btnTitle) return;
+    btnTitle.textContent = (arsamAppState === ARSAM_APP_STATE.TITLE) ? "RSG" : "Title";
+  }
+
+  if (btnTitle) {
+    btnTitle.addEventListener('pointerdown', (e)=>{
+      e.preventDefault();
+      if (arsamAppState === ARSAM_APP_STATE.TITLE){
+        const now = Date.now();
+        if (now < suppressTitleLinkUntil) return;
+        const rsgLink = document.getElementById('rsgOutboundLink');
+        if (rsgLink && typeof rsgLink.click === 'function') rsgLink.click();
+        else window.open('https://ryosatoanime.github.io/RSG/index.html', '_blank', 'noopener,noreferrer');
+        return;
+      }
+      if (arsamAppState === ARSAM_APP_STATE.PLAY) arsamEmergencyExitToTitle();
+      else arsamExitToTitleShell();
+      suppressTitleLinkUntil = Date.now() + 450;
+    }, { passive:false });
+  }
+
+  if (isMobilePlatform && btnHowto) {
+    btnHowto.addEventListener('pointerdown', (e)=>{ e.preventDefault(); Actions.howToPlay = true; }, { passive:false });
+  }
+  if (btnMute) {
+    btnMute.addEventListener('pointerdown', (e)=>{ e.preventDefault(); Actions.soundToggle = true; }, { passive:false });
+  }
+
+  // ===== HowTo overlay =====
+  const howtoEl = document.getElementById('howtoOverlay');
+  const howtoPanel = howtoEl.querySelector('.howto-panel');
+  let howtoVisible = false;
+  let howtoResumeOnClose = false;
+
+  function positionHowtoToCanvasCenter(){
+    const r = canvas.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top  + r.height / 2;
+    Object.assign(howtoPanel.style, {
+      position: 'fixed',
+      left: `${Math.round(cx)}px`,
+      top:  `${Math.round(cy)}px`,
+      transform: 'translate(-50%, -50%)'
+    });
+  }
+
+  function showHowto(){
+    if (howtoVisible) return;
+    howtoVisible = true;
+    howtoEl.style.display = 'block';
+    howtoEl.setAttribute('aria-hidden','false');
+    positionHowtoToCanvasCenter();
+
+    howtoResumeOnClose = false;
+  }
+  function hideHowto(){
+    if (!howtoVisible) return;
+    howtoVisible = false;
+    howtoEl.style.display = 'none';
+    howtoEl.setAttribute('aria-hidden','true');
+
+    
+  }
+
+  howtoEl.addEventListener('pointerdown', (e)=>{
+    if (!howtoVisible) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    hideHowto();
+  }, { capture:true });
+
+  window.addEventListener('resize', ()=>{ if(howtoVisible) positionHowtoToCanvasCenter(); });
+  window.addEventListener('scroll',  ()=>{ if(howtoVisible) positionHowtoToCanvasCenter(); }, { passive:true });
+
+  // ===== Audio: 3-state =====
+  const SHELL_SFX_ENABLED = false;
+  let audioMode = 0; // 0=all, 1=bgm off, 2=mute all
+  let SFXmute = false;
+  let BGMmute = false;
+
+  function applyAudioModeClass(mode){
+    const root = document.documentElement;
+    root.classList.remove('audio-all','audio-bgmoff','audio-mute');
+    if (mode === 0) root.classList.add('audio-all');
+    else if (mode === 1) root.classList.add('audio-bgmoff');
+    else root.classList.add('audio-mute');
+  }
+  applyAudioModeClass(audioMode);
+
+  const ctrlNote    = document.getElementById('ctrlNote');
+  const ctrlSpeaker = document.getElementById('ctrlSpeaker');
+  const ctrlSlash   = document.getElementById('ctrlSlash');
+
+  function updateAudioIcons(){
+    ctrlNote.style.display = 'none';
+    ctrlSpeaker.style.display = 'none';
+    ctrlSlash.style.display = 'none';
+    if (audioMode === 0){
+      ctrlSpeaker.style.display = 'block';
+    } else if (audioMode === 1){
+      ctrlNote.style.display = 'block';
+      ctrlSlash.style.display = 'block';
+    } else {
+      ctrlSpeaker.style.display = 'block';
+      ctrlSlash.style.display = 'block';
+    }
+  }
+
+  let audioCtx = null;
+  let masterGain = null;
+  let sfxGain = null;
+
+  function ensureAudio(){
+    if (!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.8;
+      masterGain.connect(audioCtx.destination);
+
+      sfxGain = audioCtx.createGain();
+      sfxGain.gain.value = 1.0;
+      sfxGain.connect(masterGain);
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  
+  // ===== Title jingle (direct WebAudio, Astrovader style) =====
+  // 初回のユーザー操作では Audio unlock のみ（Title jingle は TITLE 復帰時に鳴らす）
+  ['click','keydown','touchstart','pointerdown'].forEach(ev =>
+    window.addEventListener(ev, ()=>{
+      ensureAudio();
+    }, { once:true, passive:true })
+  );
+
+  function noise({ dur = 0.12, vol = 0.32, type = "bandpass", q = 6, freq = 700, sweep = 0, t0 = audioCtx.currentTime }){
+    if (SFXmute) return;
+    ensureAudio();
+
+    const src = audioCtx.createBufferSource();
+    const buf = audioCtx.createBuffer(1, Math.floor(audioCtx.sampleRate * dur), audioCtx.sampleRate);
+    const ch  = buf.getChannelData(0);
+    for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+    src.buffer = buf;
+
+    const biq = audioCtx.createBiquadFilter();
+    biq.type = type;
+    biq.Q.value = q;
+    biq.frequency.setValueAtTime(freq, t0);
+    if (sweep !== 0) biq.frequency.linearRampToValueAtTime(freq + sweep, t0 + dur);
+
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.linearRampToValueAtTime(0.0001, t0 + dur);
+
+    src.connect(biq).connect(g).connect(sfxGain);
+    src.start(t0);
+    src.stop(t0 + dur + 0.03);
+  }
+
+  function playTitleJingle(){
+    if (SFXmute) return;
+    ensureAudio();
+
+    const t0 = audioCtx.currentTime + 0.02;
+    noise({ dur: 0.11, vol: 0.32, type: "bandpass", q: 6, freq: 700,  sweep: +300, t0: t0 });
+    noise({ dur: 0.11, vol: 0.32, type: "bandpass", q: 6, freq: 950,  sweep: +350, t0: t0 + 0.12 });
+    noise({ dur: 0.12, vol: 0.32, type: "bandpass", q: 6, freq: 1200, sweep: +400, t0: t0 + 0.24 });
+    noise({ dur: 0.10, vol: 0.35, type: "bandpass", q: 6, freq: 1450, sweep: +450, t0: t0 + 0.36 });
+  }
+
+
+  function applyAudioMode(){
+    if (audioMode === 0){ SFXmute = false; BGMmute = false; }
+    else if (audioMode === 1){ SFXmute = false; BGMmute = true; }
+    else { SFXmute = true; BGMmute = true; }
+    updateAudioIcons();
+  }
+  applyAudioMode();
+
+  function blip(freq=660, ms=60, vol=0.12){
+    if (!SHELL_SFX_ENABLED) return;
+    if (SFXmute) return;
+    ensureAudio();
+  
+    const t0 = audioCtx.currentTime + 0.01;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = 'square';
+    o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + ms/1000);
+    o.connect(g).connect(masterGain);
+    o.start(t0);
+    o.stop(t0 + ms/1000 + 0.02);
+  }
+
+  let bgmInitialized = false;
+  function ensureBGMInitialized(){
+    ensureAudio();
+    if (bgmInitialized) return;
+    if (!window.AR_BGM || !window.ARSAM_BGM_SONG) return;
+    AR_BGM.init(audioCtx, masterGain);
+    AR_BGM.load(ARSAM_BGM_SONG);
+    bgmInitialized = true;
+  }
+  function startBGM(){
+    ensureBGMInitialized();
+    if (!bgmInitialized) return;
+    AR_BGM.setMuted(BGMmute);
+    AR_BGM.start();
+  }
+  function stopBGM(){
+    if (!bgmInitialized) return;
+    AR_BGM.stop();
+  }
+  function pauseBGM(){
+    if (!bgmInitialized) return;
+    if (window.AR_BGM && typeof AR_BGM.pause === 'function'){
+      AR_BGM.pause();
+    }
+  }
+  function resumeBGM(){
+    if (!bgmInitialized) return;
+    if (window.AR_BGM && typeof AR_BGM.resume === 'function'){
+      AR_BGM.resume();
+    }
+  }
+  function refreshBGMByMute(){
+    ensureBGMInitialized();
+    if (!bgmInitialized) return;
+    AR_BGM.setMuted(BGMmute);
+  }
+  function playResultMelody(isRecord){
+    if (!window.AR_BGM || typeof AR_BGM.playOneShotMelody !== 'function') return;
+    if (!window.ARSAM_RESULT_MELODIES) return;
+    ensureBGMInitialized();
+    if (!bgmInitialized) return;
+    AR_BGM.setMuted(BGMmute);
+    if (BGMmute) return;
+    const def = ARSAM_RESULT_MELODIES;
+    AR_BGM.playOneShotMelody({
+      bpm: def.bpm,
+      instrument: def.instrument,
+      notes: isRecord ? def.record : def.normal
+    });
+  }
+  
+
+// ===== i18n (minimal skeleton) =====
+const I18N = {
+  en: {
+    title: 'ASTRAL REMNANT',
+    tab: { archive:'ARCHIVE', sortie:'SORTIE', research:'RESEARCH' },
+    hint: {
+      base: '← / → : select    ↓ : open',
+      sortiePick: '← / → : select area   ↓ : open ready panel   ↑ : back',
+      research: '↓ : start (if idle)   ←/→ : pick duration',
+      shooting: 'SHOOTING — ←/→ move | ↓ shoot | ↑ : Abort',
+    },
+    hud: { ammo:'AMMO', core:'CORE', reload:'RELOAD', research:'RESEARCH' },
+    sortie: {
+      header:'SORTIE',
+      areaSelectTitle:'AREA SELECT',
+      panelTitle:'READY',
+      panelNoAmmo:'AMMO LOW',
+      readyAreaLabel:'Area:',
+      baseAmmoLabel:'BASE:',
+      readyAmmoLabel:'SORTIE AMMO:',
+      scanNewArea:'SCAN NEW AREA',
+      scanSoon:'Area scan is not available yet',
+      scoreAttackMode:'SCORE ATTACK MODE',
+      scoreAttackLaunchHint:'Select: launch Score Attack',
+      scoreAttackUnlock:'SCORE ATTACK UNLOCK',
+      deploy:'↓ : Launch',
+      noAmmoLine1:'Not enough ammo (wait for reload)',
+      closeHint:'↑ : Back',
+      carryWarning:'Leftover AMMO cannot be brought back to base',
+      unlockPanelAreaTitle:'Area Unlock',
+      unlockPanelAreaDesc:'Unlock Area5',
+      unlockPanelScoreTitle:'Score Attack Unlock',
+      unlockPanelScoreDesc:'Unlock Score Attack Mode',
+      notEnoughCore:'NOT ENOUGH CORE',
+      selectToUnlock:'Select: unlock',
+      backToClose:'Back: close',
+    },
+    research: {
+      header:'RESEARCH',
+      idle:'IDLE',
+      progress:'IN PROGRESS',
+      done:'VIEW RESULT',
+      timer:'timer',
+      coreMul:'Core Extraction Multiplier',
+      resultTitle:'RESEARCH RESULT',
+      resultOk:'↓ / ↑ : Confirm',
+      resultLineCoreMul:'+ Core Extraction Multiplier',
+      resultLineRemnantGain:'Remnant gained',
+      coreMulMaxBadge:'MAX',
+      remnantAbbr:'RMN',
+      resultLineSkill:'Skill',
+      resultLineRare:'Rare',
+      researchBonus:'Bonus',
+      resultLineOrbBonus:'Orb +1',
+      sectionDuration:'Duration',
+      sectionFacility:'Facility upgrade',
+      facilityDuplicateNote:'— At 1h/4h edge, ←/→ opens facility · ↑ returns to duration',
+      auxInstantResearch:'Instant Research',
+      auxResearchTimeReduction:'Research Time -{{pct}}%',
+      confirmSelected:'Selected: {{dur}}',
+      confirmResearchTimeLine:'Research Time : {{time}}',
+      confirmInstantTitle:'Instant research',
+      confirmUses4hTable:'Uses 4h reward table',
+      confirmSelectHint:'Select: confirm',
+    },
+    facility: {
+      panelTitle:'Research facility',
+      lv:'Lv.',
+      next:'Next',
+      max:'MAX',
+      coreLabel:'Core',
+      eff1:'Lv1: Skill Lv.2 + gated skills unlock',
+      eff2:'Lv2: Skill Lv.3 + Research bonus slot +1',
+      upgradeOk:'↓ : Upgrade',
+      needCore:'Need more Core',
+      atMax:'Facility MAX',
+      upgradePanelTitle:'Facility Upgrade',
+      upgradePanelUnlockLv1:'Skill Lv.2 + gated skills unlock',
+      upgradePanelUnlockLv2:'Skill Lv.3 + Research bonus slot +1',
+      notEnoughCore:'NOT ENOUGH CORE',
+      selectToUpgrade:'Select: upgrade confirm',
+      backToClose:'Back: close',
+    },
+    shell: { btnHowto:'How To Play' },
+
+skill: {
+  remnant_carrier_blast_name: 'Remnant Carrier Blast',
+  remnant_carrier_blast_desc: 'Enhances blast radius and linger time when directly hitting a Remnant carrier.',
+  magazine_capacity_name: 'Sortie Magazine +1',
+  magazine_capacity_desc: 'Increase per-sortie magazine size by 1.',
+  reload_plus_name: 'Reload +',
+  reload_plus_desc: 'Increase reload amount per tick by +1.',
+  research_speed_name: 'Research speed',
+  research_speed_desc: 'Base/meta: placeholder (ID normalized).',
+  research_efficiency_name: 'Research efficiency',
+  research_efficiency_desc: 'Lv1 reduces empty research rolls. Lv2 also rerolls one capped duplicate skill slot.',
+  movement_speed_name: 'Movement',
+  movement_speed_desc: 'Sortie: player speed (runCfg).',
+  bullet_speed_name: 'Bullet velocity',
+  bullet_speed_desc: 'Sortie: shot speed (runCfg).',
+  shot_cooldown_name: 'Fire rate',
+  shot_cooldown_desc: 'Sortie: shot cooldown (runCfg).',
+  blast_radius_name: 'Blast radius',
+  blast_radius_desc: 'Sortie: blast radius (runCfg).',
+  blast_shrink_name: 'Blast falloff',
+  blast_shrink_desc: 'Sortie: blast shrink (runCfg).',
+  chain_reaction_name: 'Chain reaction',
+  chain_reaction_desc: 'Sortie: blast chain table (runCfg).',
+  orb_gravity_name: 'Orb pull',
+  orb_gravity_desc: 'Sortie: orb gravity (runCfg).',
+  core25_name: 'Core Yield +25%',
+  core25_desc: 'Increase core extraction yield by 25%.',
+  rare1_name: 'Rare Gauge +1',
+  rare1_desc: 'Increase rare progress by 1 when gained.'
+},
+skills: {
+  header: 'SKILLS',
+  permTitle: 'PERMANENT (Research)',
+  none: 'None yet',
+  hint: 'Icons are 48×48 placeholders'
+},
+collective: {
+  header: 'ARCHIVE',
+  panelCollectives: 'Collectives',
+  panelSkillsLabel: 'Skills',
+  toggleHint: '↓ : other panel',
+  browseHint: '←/→ : browse',
+  nameFmt: 'Astral remnant {{n}}',
+  descPlaceholder: 'Effect not implemented.',
+  owned: 'Obtained',
+  missing: '—',
+  progressFmt: '{{n}} / {{max}}',
+  cat: { remnant: 'Remnant', signal: 'Signal', echo: 'Echo' }
+},
+archive: {
+  discoveredThroughResearch: 'Discovered through research'
+},
+
+  },
+};
+
+const LANG = 'en';
+
+function t(key){
+  const parts = String(key).split('.');
+  let cur = I18N.en;
+
+  for (const p of parts){
+    if (!cur || !(p in cur)) return key;
+    cur = cur[p];
+  }
+
+  return cur != null ? cur : key;
+}
+
+
+  // ===== App legacy mirror (ARSAM standalone input routing only) =====
+  const App = {
+    scene: 'arsam',
+    combatMode: null,
+
+    init(){
+      this.scene = 'arsam';
+      this.combatMode = null;
+    },
+
+    _setScene(next){
+      this.scene = next;
+      if (next !== 'shooting'){
+        this.combatMode = null;
+        MobilePadInput.moveLeft = false;
+        MobilePadInput.moveRight = false;
+        MobilePadInput.select = false;
+        Actions.moveLeft = false;
+        Actions.moveRight = false;
+        Actions.select = false;
+      }
+    },
+
+    _onSortieExit(_payload){},
+
+    _onSamExit(_payload){}
+  };
+
+
+  /** Max-skill runCfg snapshot (formerly buildRunCfg.js buildSamRunCfg). ammo counts overridden by arsam_state.js SAM_AMMO_CFG. */
+  const ARSAM_DEFAULT_RUN_CFG = Object.freeze({
+    player: Object.freeze({
+      speed: 90,
+      orbGravityRadius: 0,
+      orbGravityForce: 0
+    }),
+    weapon: Object.freeze({
+      ammoMax: 20,
+      ammoStart: 20,
+      bulletSpeed: 250,
+      cooldownSec: 0.8
+    }),
+    blast: Object.freeze({
+      radius: 20,
+      grow: 0.20,
+      shrink: 0.50,
+      remnantCarrierRadiusMul: 1.25,
+      remnantCarrierShrinkMul: 1.25,
+      mulTable: Object.freeze([1.00, 1.00, 0.75, 0.50])
+    })
+  });
+
+  function cloneArsamRunCfg(){
+    return {
+      player: Object.assign({}, ARSAM_DEFAULT_RUN_CFG.player),
+      weapon: Object.assign({}, ARSAM_DEFAULT_RUN_CFG.weapon),
+      blast: Object.assign({}, ARSAM_DEFAULT_RUN_CFG.blast, {
+        mulTable: ARSAM_DEFAULT_RUN_CFG.blast.mulTable.slice()
+      })
+    };
+  }
+
+  function createArsamRunCfg(){
+    return cloneArsamRunCfg();
+  }
+
+  function loadArsamTitlePng(){
+    if (typeof Image === 'undefined') return;
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => { IMG_ARSAM_TITLE = img; };
+    img.onerror = () => { IMG_ARSAM_TITLE = null; };
+    img.src = 'ARSAM.png';
+  }
+
+  function getFont8(){
+    const f = window.ARSAM_FONT8;
+    if (f && typeof f.draw === 'function' && typeof f.measure === 'function') return f;
+    return null;
+  }
+
+  function drawDotText(txt, y, color='#fff'){
+    const f = getFont8();
+    if (!f || !txt) return;
+    const w = f.measure(txt, 1);
+    const x = ((DOT_W - w) / 2) | 0;
+    f.draw(dotCtx, txt, x, y | 0, color, 1);
+  }
+
+  function drawDotTextAt(txt, x, y, color='#fff'){
+    const f = getFont8();
+    if (!f || !txt) return;
+    f.draw(dotCtx, String(txt), x | 0, y | 0, color, 1);
+  }
+
+  function drawDotTextRight(txt, rightX, y, color='#fff'){
+    const f = getFont8();
+    const s = String(txt == null ? '' : txt);
+    if (!f || !s) return;
+    const w = f.measure(s, 1);
+    f.draw(dotCtx, s, (rightX - w) | 0, y | 0, color, 1);
+  }
+
+  function drawTitleLogo(){
+    const img = IMG_ARSAM_TITLE;
+    if (img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0){
+      const iw = Math.max(1, img.naturalWidth | 0);
+      const ih = Math.max(1, img.naturalHeight | 0);
+      const x = ((DOT_W - iw) / 2) | 0;
+      const y = ((DOT_H - ih) / 2) | 0;
+      dotCtx.drawImage(img, x, y);
+      return;
+    }
+    drawDotText('ARSAM', 76, '#fff');
+  }
+
+  const ARSAM_RECORDS_KEY = 'ARSAM:records';
+
+  function arsamRecordInt(v){
+    const x = Math.floor(Number(v));
+    return (Number.isFinite(x) && x >= 0) ? x : 0;
+  }
+
+  function normalizeArsamTopScoreEntry(raw){
+    if (!raw || typeof raw !== 'object') return null;
+    const score = arsamRecordInt(raw.score);
+    const scoreMult = arsamRecordInt(raw.scoreMult);
+    const survivedSec = arsamRecordInt(raw.survivedSec);
+    const maxChain = arsamRecordInt(raw.maxChain);
+    return { score, scoreMult, survivedSec, maxChain };
+  }
+
+  function sortTrimArsamTopScores(list){
+    list.sort((a, b)=> b.score - a.score);
+    if (list.length > 5) list.length = 5;
+    return list;
+  }
+
+  function normalizeArsamRecords(raw){
+    const def = { topScores: [], bestMaxChain: 0 };
+    if (!raw || typeof raw !== 'object') return def;
+    let topScores = [];
+    if (Array.isArray(raw.topScores)){
+      for (const item of raw.topScores){
+        const e = normalizeArsamTopScoreEntry(item);
+        if (e) topScores.push(e);
+      }
+    }
+    sortTrimArsamTopScores(topScores);
+    return {
+      topScores,
+      bestMaxChain: arsamRecordInt(raw.bestMaxChain),
+    };
+  }
+
+  function loadArsamRecords(){
+    try{
+      const s = localStorage.getItem(ARSAM_RECORDS_KEY);
+      if (s == null || s === '') return normalizeArsamRecords(null);
+      return normalizeArsamRecords(JSON.parse(s));
+    }catch(_e){
+      return normalizeArsamRecords(null);
+    }
+  }
+
+  function saveArsamRecords(records){
+    try{
+      localStorage.setItem(ARSAM_RECORDS_KEY, JSON.stringify(normalizeArsamRecords(records)));
+    }catch(_e){}
+  }
+
+  function updateArsamRecordsFromResult(result){
+    const records = loadArsamRecords();
+    const score = arsamRecordInt(result && result.score);
+    const scoreMult = arsamRecordInt(result && result.scoreMult);
+    const survivedSec = arsamRecordInt(result && result.survivedSec);
+    const maxChain = arsamRecordInt(result && result.maxChain);
+    const previousBestScore = (records.topScores[0] && records.topScores[0].score) || 0;
+    const previousBestMaxChain = records.bestMaxChain || 0;
+    const topBefore = JSON.stringify(records.topScores);
+    let scoreRecordBroken = false;
+    let chainRecordBroken = false;
+
+    if (score > 0){
+      records.topScores.push({ score, scoreMult, survivedSec, maxChain });
+      sortTrimArsamTopScores(records.topScores);
+      const top = records.topScores[0];
+      if (top && top.score === score && score > previousBestScore) scoreRecordBroken = true;
+    }
+    if (maxChain > previousBestMaxChain){
+      records.bestMaxChain = maxChain;
+      chainRecordBroken = true;
+    }
+    const changed = topBefore !== JSON.stringify(records.topScores)
+      || records.bestMaxChain !== previousBestMaxChain;
+    if (changed) saveArsamRecords(records);
+
+    return { records, scoreRecordBroken, chainRecordBroken };
+  }
+
+  function startArsamRun(){
+    const ar = window.ARSAM;
+    if (!ar) return false;
+    const runCfg = createArsamRunCfg();
+    if (!runCfg) return false;
+
+    lastResult = null;
+    try{
+      if (typeof ar.init === 'function') ar.init(runCfg);
+      else if (typeof ar.reset === 'function') ar.reset(runCfg);
+      else return false;
+    }catch(_e){
+      return false;
+    }
+
+    applyArsamDebugInvincibleState();
+
+    arsamPaused = false;
+    Actions.pause = false;
+    arsamAppState = ARSAM_APP_STATE.PLAY;
+    App.scene = 'shooting';
+    App.combatMode = 'sam';
+    Actions.abort = false;
+    Actions.back = false;
+    Actions.select = false;
+    if (window.AR_SFX && typeof AR_SFX.play === 'function'){
+      AR_SFX.play('launch');
+    }
+    startBGM();
+    blip(520, 40, 0.08);
+    return true;
+  }
+
+  function arsamOnRunEnd(payload){
+    const recordState = updateArsamRecordsFromResult(payload || {});
+    lastResult = Object.assign({}, payload || {}, { recordState });
+    arsamPaused = false;
+    Actions.pause = false;
+    arsamAppState = ARSAM_APP_STATE.RESULT;
+    App.scene = 'arsam';
+    App.combatMode = null;
+    const isRecord =
+      recordState.scoreRecordBroken ||
+      recordState.chainRecordBroken;
+    playResultMelody(isRecord);
+  }
+
+  function stepArsamShell(_dt){
+    titleFrame = (titleFrame + 1) | 0;
+    if (arsamAppState === ARSAM_APP_STATE.TITLE){
+      if (consumeAction('select')) startArsamRun();
+      else if (consumeAction('actionLeft') || consumeAction('actionRight')){
+        arsamAppState = ARSAM_APP_STATE.RECORDS;
+        blip(420, 25, 0.06);
+      }
+      return;
+    }
+
+    if (arsamAppState === ARSAM_APP_STATE.RECORDS){
+      if (consumeAction('select') || consumeAction('actionLeft') || consumeAction('actionRight')){
+        arsamExitToTitleShell();
+      }
+      return;
+    }
+
+    if (arsamAppState === ARSAM_APP_STATE.PLAY){
+      const ar = window.ARSAM;
+      const gameplayActive = !!ar && ar.mode === 'PLAY';
+    
+      if (consumeAction('pause') && gameplayActive){
+        arsamPaused = !arsamPaused;
+        if (arsamPaused){
+          pauseBGM();
+        } else {
+          resumeBGM();
+        }
+        blip(arsamPaused ? 260 : 520, 35, 0.06);
+      }
+    
+      if (!gameplayActive){
+        arsamPaused = false;
+        Actions.pause = false;
+      }
+    
+      if (arsamPaused){
+        Actions.select = false;
+        Actions.moveLeft = false;
+        Actions.moveRight = false;
+        return;
+      }
+    
+      if (ar && typeof ar.step === 'function'){
+        const modeBeforeStep = ar.mode;
+        ar.step(_dt, Actions);
+        if (modeBeforeStep === 'PLAY' && ar.mode === 'RESULT'){
+          stopBGM();
+        }
+        const payload = (typeof ar.consumeExit === 'function') ? ar.consumeExit() : null;
+        if (payload) arsamOnRunEnd(payload);
+      }
+      return;
+    }
+
+    if (arsamAppState === ARSAM_APP_STATE.RESULT){
+      if (consumeAction('select')) startArsamRun();
+    }
+  }
+
+  function drawArsamTitleScreen(){
+    dotCtx.fillStyle = '#000';
+    dotCtx.fillRect(0, 0, DOT_W, DOT_H);
+    drawTitleLogo();
+    if (((titleFrame / 30) | 0) % 2 === 0){
+      drawDotText('START GAME', 148, '#fff');
+    }
+  }
+
+  function drawArsamResultScreen(){
+    const p = lastResult || {};
+    const rs = p.recordState || null;
+    dotCtx.fillStyle = '#000';
+    dotCtx.fillRect(0, 0, DOT_W, DOT_H);
+    const score = Math.max(0, Math.floor(Number(p.score) || 0));
+    const mult = Math.max(1, Math.floor(Number(p.scoreMult) || 1));
+    const sec = Math.max(0, Math.floor(Number(p.survivedSec) || 0));
+    const maxChain = Math.max(0, Math.floor(Number(p.maxChain) || 0));
+    const scoreLine = 'SCORE ' + score;
+    const midLine = 'x' + mult + '  ' + sec + 'sec';
+    const chainLine = 'max chain ' + maxChain;
+    const blinkOn = (((titleFrame / 30) | 0) % 2) === 0;
+    const scoreBroken = !!(rs && rs.scoreRecordBroken);
+    const chainBroken = !!(rs && rs.chainRecordBroken);
+    if ((scoreBroken || chainBroken) && blinkOn){
+      drawDotText('RECORD BROKEN', 44, '#f10');
+    }
+    drawDotText(scoreLine, 72, scoreBroken ? (blinkOn ? '#fff' : '#0ff') : '#fff');
+    drawDotText(midLine, 92, '#fff');
+    drawDotText(chainLine, 112, chainBroken ? (blinkOn ? '#fff' : '#0ff') : '#fff');
+  }
+
+  const ARSAM_SEC_ICON_W = 16;
+  const ARSAM_SEC_ICON_H = 8;
+  const ARSAM_SEC_ICON_ROWS = [
+    0b0000000000000000,
+    0b0000000000000000,
+    0b0111001110001110,
+    0b1100011001011000,
+    0b1111011111011000,
+    0b0011011000011000,
+    0b1110001110001110,
+    0b0000000000000000,
+  ];
+
+  function drawArsamSecIcon(x, y, color='#fff'){
+    const rows = ARSAM_SEC_ICON_ROWS;
+    dotCtx.fillStyle = color;
+    for (let yy = 0; yy < ARSAM_SEC_ICON_H; yy++){
+      const row = rows[yy] || 0;
+      for (let xx = 0; xx < ARSAM_SEC_ICON_W; xx++){
+        if (row & (1 << (ARSAM_SEC_ICON_W - 1 - xx))){
+          dotCtx.fillRect((x + xx) | 0, (y + yy) | 0, 1, 1);
+        }
+      }
+    }
+  }
+
+  function drawArsamTopScoreRow(rank, entry, y){
+    const rankText = String(rank) + '.';
+    const scoreText = String(arsamRecordInt(entry.score));
+    const multText = 'x' + String(arsamRecordInt(entry.scoreMult));
+    const secNumText = String(arsamRecordInt(entry.survivedSec));
+
+    const rankX = 16;
+    const scoreRightX = 80;
+    const multX = 94;
+    const secRightX = 176;
+
+    const secIconW = ARSAM_SEC_ICON_W;
+    const secIconGap = 1;
+    const secIconX = secRightX - secIconW;
+    const secNumRightX = secIconX - secIconGap;
+
+    drawDotTextAt(rankText, rankX, y, '#fff');
+    drawDotTextRight(scoreText, scoreRightX, y, '#fff');
+    drawDotTextAt(multText, multX, y, '#fff');
+
+    drawDotTextRight(secNumText, secNumRightX, y, '#fff');
+    drawArsamSecIcon(secIconX, y, '#fff');
+  }
+
+  function drawArsamRecordsScreen(){
+    const records = loadArsamRecords();
+    const topScores = records.topScores || [];
+    dotCtx.fillStyle = '#000';
+    dotCtx.fillRect(0, 0, DOT_W, DOT_H);
+    drawDotText('RECORDS', 36, '#fff');
+    if (topScores.length === 0){
+      drawDotText('NO RECORDS', 68, '#fff');
+    }else{
+      const ys = [60, 74, 88, 102, 116];
+      for (let i = 0; i < topScores.length && i < 5; i++){
+        drawArsamTopScoreRow(i + 1, topScores[i], ys[i]);
+      }
+    }
+    drawDotText('MAX CHAIN ' + arsamRecordInt(records.bestMaxChain), 144, '#fff');
+  }
+
+  function drawArsamPauseOverlay(){
+    drawDotText('PAUSED', 92, '#fff');
+  }
+
+  function renderArsamShell(){
+    if (arsamAppState === ARSAM_APP_STATE.TITLE){
+      drawArsamTitleScreen();
+      return;
+    }
+    if (arsamAppState === ARSAM_APP_STATE.PLAY){
+      const ar = window.ARSAM;
+      if (ar && typeof ar.render === 'function'){
+        ar.shellPaused = arsamPaused;
+        ar.render(dotCtx);
+      } else drawArsamTitleScreen();
+
+      if (arsamPaused){
+        drawArsamPauseOverlay();
+      }
+      return;
+    }
+    if (arsamAppState === ARSAM_APP_STATE.RESULT){
+      drawArsamResultScreen();
+      return;
+    }
+    if (arsamAppState === ARSAM_APP_STATE.RECORDS){
+      drawArsamRecordsScreen();
+    }
+  }
+
+  function presentDotCanvas(){
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, 600, 600);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 600, 600);
+    ctx.drawImage(dotCanvas, 0, 0, DOT_W, DOT_H, DOT_DRAW_X, DOT_DRAW_Y, DOT_DRAW_W, DOT_DRAW_H);
+/*
+        if (arsamAppState === ARSAM_APP_STATE.PLAY){
+      const ar = window.ARSAM;
+      if (ar && typeof ar._drawPlayDebugOverlay600 === 'function'){
+        ar._drawPlayDebugOverlay600(ctx);
+      }
+    }
+*/
+  }
+
+  function arsamExitToTitleShell(){
+    arsamAppState = ARSAM_APP_STATE.TITLE;
+    lastResult = null;
+    arsamPaused = false;
+    App.scene = 'arsam';
+    App.combatMode = null;
+    Actions.abort = false;
+    Actions.back = false;
+    Actions.select = false;
+    Actions.actionLeft = false;
+    Actions.actionRight = false;
+    Actions.pause = false;
+    stopBGM();
+    blip(240, 40, 0.07);
+    playTitleJingle();
+  }
+
+  function arsamEmergencyExitToTitle(){
+    if (arsamAppState !== ARSAM_APP_STATE.PLAY) return;
+    arsamExitToTitleShell();
+  }
+
+  function initArsamShellStartup(){
+    arsamAppState = ARSAM_APP_STATE.TITLE;
+    lastResult = null;
+    titleFrame = 0;
+    App.init(); // standalone: scene/combatMode mirror only — no Base localStorage
+    applyArsamDebugInvincibleState();
+    loadArsamTitlePng();
+  }
+
+  function arsamHandleBack(){
+    if (arsamAppState === ARSAM_APP_STATE.RESULT
+      || arsamAppState === ARSAM_APP_STATE.RECORDS){
+      arsamExitToTitleShell();
+    }
+  }
+
+  initArsamShellStartup();
+// ===== Main loop (ARSAM standalone — stepArsamShell / renderArsamShell; App.render unused) =====
+  const FPS_TARGET = 60;
+  const FRAME_MS = 1000 / FPS_TARGET;
+  let last = performance.now();
+  let acc = 0;
+  resetLoopClock = ()=>{
+    last = performance.now();
+    acc = 0;
+  };
+
+  function loop(now){
+    const rawD = now - last;
+    const d = Math.min(rawD, 250);
+    last = now;
+    acc += d;
+
+    GamepadInput.poll();
+    updateTitleButtonLabel();
+
+    if (consumeAction('soundToggle')){
+      audioMode = (audioMode + 1) % 3;
+      applyAudioModeClass(audioMode);
+      applyAudioMode();
+      refreshBGMByMute();
+      blip(520, 40, 0.10);
+    }
+
+    if (consumeAction('howToPlay')){
+      if (howtoVisible) hideHowto();
+      else showHowto();
+    }
+
+    if (howtoVisible){
+      Actions.back = false;
+    }
+
+    if (consumeAction('back')){
+      arsamHandleBack();
+    }
+    while (acc >= FRAME_MS){
+      const dt = FRAME_MS / 1000;
+      if (!howtoVisible){
+        stepArsamShell(dt);
+      }
+      acc -= FRAME_MS;
+    }
+
+    renderArsamShell();
+    presentDotCanvas();
+
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame((t)=>{ last=t; requestAnimationFrame(loop); });
+
+  window.RSGShell = { canvas, ctx, Actions, App };
+
+  // ===== Mobile zoom/gesture suppression =====
+  // iOS Safari uses gesture* events for pinch-zoom; also prevent multi-touch zoom and double-tap zoom.
+  (function(){
+    const opts = { passive:false };
+    document.addEventListener('gesturestart', (e)=>{ e.preventDefault(); }, opts);
+    document.addEventListener('gesturechange', (e)=>{ e.preventDefault(); }, opts);
+    document.addEventListener('gestureend', (e)=>{ e.preventDefault(); }, opts);
+
+    document.addEventListener('touchmove', (e)=>{
+      if (e.touches && e.touches.length > 1) e.preventDefault();
+    }, opts);
+
+    document.addEventListener('dblclick', (e)=>{ e.preventDefault(); }, opts);
+  })();
+
+})();
+</script>
+</body>
+</html>
