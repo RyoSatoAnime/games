@@ -10,25 +10,56 @@
 <link rel="apple-touch-icon" sizes="180x180" href="/RSG/favicon/apple-touch-icon.png" />
 <link rel="manifest" href="/RSG/favicon/site.webmanifest" />
 <style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
-  html, body { margin:0; background:#000; color:#fff; }
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
   body {
-    font-family: -apple-system, Arial, Arial Black, Helvetica, sans-serif;
+    margin: 0;
+    background: #000;
+    color: #fff;
+  }
+
+  body {
+    font-family: -apple-system, Arial, "Arial Black", Helvetica, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* 固定リボン + リスト1段相当。隠れによる「スクロール不能」を防ぐ */
-    padding-bottom: calc(56px + clamp(72px, 10vmin, 120px) + env(safe-area-inset-bottom, 0px));
+
+    /* 固定リボン + リスト1段相当 */
+    padding-bottom: calc(
+      56px + clamp(72px, 10vmin, 120px) + env(safe-area-inset-bottom, 0px)
+    );
   }
-  a { color: inherit; text-decoration: none; }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
 
   /* Header */
-  .header { background:#000; position: sticky; top:0; z-index: 10; }
+
+  .header {
+    background: #000;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
   .brand-row {
-    display:flex; align-items:center; justify-content:center; gap:16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
     padding: 22px 24px 18px;
     border-bottom: 2px solid #fff;
   }
+
   .brand {
     position: relative;
     display: flex;
@@ -37,6 +68,7 @@
     margin: 0;
     line-height: 0;
   }
+
   .brand-logo {
     display: block;
     height: clamp(30px, 4.6vw, 48px);
@@ -44,7 +76,7 @@
     max-width: min(100%, calc(100vw - 48px));
     object-fit: contain;
   }
-  /* 文字列は非表示（画像の alt / 文脈用フォールバック。読み上げは alt のみ） */
+
   .brand-fallback {
     position: absolute;
     width: 1px;
@@ -55,53 +87,224 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
-    font-family: -apple-system, Arial Black, Arial, Helvetica, sans-serif;
+
+    font-family: -apple-system, "Arial Black", Arial, Helvetica, sans-serif;
     font-size: clamp(30px, 4.6vw, 48px);
     font-weight: 1000;
     letter-spacing: 0.5px;
     line-height: 1;
   }
-  .brand-fallback .r { color: #cc0000; }
-  .brand-fallback .g { color: #006600; }
+
+  .brand-fallback .r {
+    color: #cc0000;
+  }
+
+  .brand-fallback .g {
+    color: #006600;
+  }
+
 
   /* Main */
+
   .main {
-    padding: clamp(28px, 6vmin, 56px) 24px 0;
+    padding: clamp(24px, 5vmin, 48px) 24px 0;
     min-height: calc(100dvh - 120px);
   }
-  .row {
+
+  .rows {
+    width: 100%;
     max-width: 800px;
     margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center; 
-    gap: 8px;
+    display: grid;
   }
+
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(90px, 20vw, 175px);
+    align-items: center;
+    column-gap: clamp(8px, 2vw, 24px);
+    width: 100%;
+  }
+
+  /* 通常ゲーム同士 */
+  .row + .row {
+    margin-top: 28px;
+  }
+
   .title {
+    justify-self: start;
+    min-width: 0;
+    text-align: left;
+
     font-family: -apple-system, Arial, Helvetica, sans-serif;
     font-weight: 700;
     font-size: clamp(20px, 4.6vw, 40px);
     letter-spacing: 1px;
+    white-space: nowrap;
   }
+
+  .title .t-custom {
+    color: var(--accent, inherit);
+    font-style: var(--title-style, normal);
+  }
+
+  .title--wrap {
+    white-space: normal;
+  }
+
+  /* Play button */
+
   .play-btn {
-    display:inline-flex; align-items:center; justify-content:center;
-    min-width: 160px; height: 60px;
-    padding: 0 22px;
-    background:#17cbe3; color:#000;
-    font-weight: 700; 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    justify-self: end;
+    width: 100%;
+    min-width: 0;
+    height: 60px;
+    padding: 0 12px;
+
+    background: var(--btn-bg, #222);
+    color: var(--btn-fg, #fff);
+    border: 1px solid var(--btn-border, transparent);
+
     font-family: -apple-system, Arial, Helvetica, sans-serif;
+    font-weight: 700;
     font-size: clamp(22px, 2.6vw, 30px);
-    transition: transform .06s ease, filter .06s ease;
+    text-align: center;
+
     outline: none;
-    cursor: pointer; user-select: none; touch-action: manipulation;
+    cursor: pointer;
+    user-select: none;
+    touch-action: manipulation;
+
+    transition: transform .05s ease, opacity .15s ease;
   }
-  .play-btn:hover { filter: brightness(1.08); }
-  .play-btn:active { transform: translateY(1px) scale(0.99); }
-  .play-btn:focus-visible { outline: 3px solid #17cbe3; outline-offset: 2px; }
+
+  .play-btn:hover {
+    opacity: .9;
+    transform: translateY(-1px);
+  }
+
+  .play-btn:active {
+    transform: translateY(0);
+  }
+
+  .play-btn:focus-visible {
+    outline: 3px solid #17cbe3;
+    outline-offset: 2px;
+  }
+
+
+  /* Variant games */
+
+  .row--variant {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  /* 親ゲーム → 派生ゲーム */
+  .row + .row--variant {
+    margin-top: 10px;
+  }
+
+  /* 派生ゲーム → 派生ゲーム */
+  .row--variant + .row--variant {
+    margin-top: 6px;
+  }
+
+  /* 派生ゲーム → 次の通常ゲーム */
+  .row--variant + .row:not(.row--variant) {
+    margin-top: 28px;
+  }
+
+  .variant-link {
+    justify-self: start;
+
+    font-family: -apple-system, Arial, Helvetica, sans-serif;
+    font-weight: 700;
+    font-size: clamp(13px, 2.8vw, 20px);
+    letter-spacing: .6px;
+    line-height: 1.2;
+
+    transition: opacity .15s ease;
+  }
+
+  .variant-link::before {
+    content: "- ";
+  }
+
+  .variant-link:hover {
+    opacity: .75;
+  }
+
+  .variant-link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 4px;
+  }
+
+
+  /* Title decoration */
+
+  .t-red {
+    color: #f10;
+  }
+
+  .rcp-red {
+    color: #b12;
+  }
+
+  .t-ita {
+    font-style: italic;
+  }
+
+  .t-stroke {
+    --sw: 1.2px;
+    --stroke: #fff;
+    --fill: #000;
+
+    color: var(--fill);
+    paint-order: stroke fill;
+
+    -webkit-text-stroke: var(--sw) var(--stroke);
+    text-stroke: var(--sw) var(--stroke);
+
+    text-shadow:
+      0 0 0 var(--stroke),
+      1px 0 0 var(--stroke),
+      -1px 0 0 var(--stroke),
+      0 1px 0 var(--stroke),
+      0 -1px 0 var(--stroke),
+      1px 1px 0 var(--stroke),
+      -1px 1px 0 var(--stroke),
+      1px -1px 0 var(--stroke),
+      -1px -1px 0 var(--stroke);
+  }
+
+  .t1 {
+    --stroke: #f10;
+    --fill: #000;
+    font-style: italic;
+  }
+
+  .t2 {
+    --stroke: #fff;
+    --fill: #000;
+    font-style: normal;
+  }
+
+  .MB-ita {
+    font-style: italic;
+  }
+
 
   /* Footer ribbon */
+
   .ribbon {
-    position: fixed; inset-inline: 0; bottom:0;
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
     height: 56px;
     background: #cfcfcf;
     padding: 5px 24px;
@@ -112,149 +315,108 @@
     max-width: 800px;
     height: 100%;
     margin: 0 auto;
+
     display: flex;
     align-items: center;
     justify-content: flex-end;
   }
+
   .yt-link {
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  background: #FF0000;
-  display: grid; place-items: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
-  border: 2px solid #FF0000;
-  margin-right: 10px;
-}
-.yt-link svg { width: 28px; height: 28px; }
-.yt-link:hover { filter: brightness(1.1); }
-}
-.yt-link svg {
-  width: 36px; height: 36px;
-}
-.yt-link:hover { filter: brightness(1.1); }
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    background: #f00;
+
+    display: grid;
+    place-items: center;
+
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .35);
+    border: 2px solid #f00;
+    margin-right: 10px;
+  }
+
+  .yt-link svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .yt-link:hover {
+    filter: brightness(1.1);
+  }
 
   .x-link {
-    width: 46px; height: 46px; border-radius: 10px;
-    background:#000; display:grid; place-items:center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    background: #000;
+
+    display: grid;
+    place-items: center;
+
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .35);
     border: 2px solid #000;
   }
-  .x-link img { width: 24px; height: 24px; object-fit: contain; display: block; }
-  .x-link:hover { filter: brightness(1.1); }
+
+  .x-link img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    display: block;
+  }
+
+  .x-link:hover {
+    filter: brightness(1.1);
+  }
+
+
+  /* Mobile */
 
   @media (max-width: 680px) {
-    .play-btn { min-width: 140px; height: 54px; }
-    .main { padding-top: 24px; }
+    .main {
+      padding-top: 22px;
+    }
+
+    .row {
+      /*
+       * まず gap と Play 幅を縮め、
+       * タイトル側の幅を優先する。
+       */
+      grid-template-columns: minmax(0, 1fr) clamp(82px, 24vw, 104px);
+      column-gap: 8px;
+    }
+
+    .title {
+      font-size: clamp(20px, 6.2vw, 28px);
+      letter-spacing: .5px;
+    }
+
+    .play-btn {
+      height: 52px;
+      padding: 0 8px;
+      font-size: clamp(20px, 5.8vw, 24px);
+    }
+
+    .row + .row {
+      margin-top: 24px;
+    }
+
+    .row + .row--variant {
+      margin-top: 8px;
+    }
+
+    .row--variant + .row--variant {
+      margin-top: 4px;
+    }
+
+    .row--variant + .row:not(.row--variant) {
+      margin-top: 24px;
+    }
+
+    .variant-link {
+      font-size: 13px;
+      line-height: 1.15;
+    }
   }
-    .play-btn { min-width: 140px; height: 54px; }
-    .main { padding-top: 24px; }
-  }
-  .title .t-custom {
-  color: var(--accent, inherit);
-  font-style: var(--title-style, normal);
-}
-.play-btn {
-  background: var(--btn-bg, #222);
-  color: var(--btn-fg, #fff);
-  border: 1px solid var(--btn-border, transparent);
-  transition: transform .05s ease, opacity .15s ease;
-}
-
-.play-btn:hover { opacity: .9; transform: translateY(-1px); }
-.play-btn:active { transform: translateY(0); }
-
-.t-red {
-  color: #f10;
-}
-
-.rcp-red{
-  color: #b12;
-}
-
-.t-ita{
-    font-style: italic
-  }
-
-.t-stroke {
-  --sw: 1.2px;
-  --stroke: #fff;
-  --fill: #000;
-
-  color: var(--fill);
-  paint-order: stroke fill;
-
-  -webkit-text-stroke: var(--sw) var(--stroke);
-  text-stroke: var(--sw) var(--stroke);
-
-  text-shadow:
-    0 0   0 var(--stroke),
-    1px 0 0 var(--stroke), -1px 0 0 var(--stroke),
-    0 1px 0 var(--stroke),  0 -1px 0 var(--stroke),
-    1px 1px 0 var(--stroke), -1px 1px 0 var(--stroke),
-    1px -1px 0 var(--stroke), -1px -1px 0 var(--stroke);
-}
-
-.t1 {
-  --stroke: #f10;
-  --fill: #000;
-  font-style: italic;
-}
-
-.t2 {
-  --stroke: #fff;
-  --fill: #000;
-  font-style: normal;
-}
-
-  .MB-ita {
-    font-style: italic
-  }
-</style>
-
-<style>
-.rows{
-  width: min(800px, calc(100vw - 48px));
-  margin: 0 auto;
-  display: grid;
-  gap: 36px;
-}
-
-.row{
-  display: grid;
-  grid-template-columns: 1fr var(--btn-w, 320px);
-  align-items: center;
-  column-gap: 24px;
-  width: 100%;
-}
-
-.title{ justify-self: start; text-align: left; }
-.play-btn{ justify-self: end; width: 100%; text-align: center; }
-
-.row{
-  grid-template-columns: 2.5fr 0.7fr;
-}
-.play-btn{ width:100%; }
-
-/* 派生ゲーム: 小型テキストリンク */
-.row--variant {
-  grid-template-columns: 1fr;
-  min-height: 0;
-}
-
-.variant-link {
-  justify-self: start;
-  font-family: -apple-system, Arial, Helvetica, sans-serif;
-  font-weight: 700;
-  font-size: clamp(15px, 2.8vw, 20px);
-  letter-spacing: .6px;
-  line-height: 0;
-  transition: opacity .15s ease;
-}
-
-.variant-link:hover { opacity: .75; }
-.variant-link:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
-
 </style>
 
 </head>
@@ -301,7 +463,7 @@
 
 <div class="row"
      style="--btn-bg:#f60; --btn-fg:#000; --btn-border:#f60;">
-  <div class="title">Deep Command</div>
+  <div class="title title--wrap">Deep <wbr>Command</div>
   <a class="play-btn" href="./dc/DeepCommand.html" role="button">Play</a>
 </div>
 
@@ -319,7 +481,7 @@
 
 <div class="row"
      style="--btn-bg:#000; --btn-fg:#fff; --btn-border:#fff;">
-  <div class="title"><span class="t-ita">MIDNIGHT</span><span class="t-stroke MB-ita">BLACKTOP</span></div>
+  <div class="title title--wrap"><span class="t-ita">MIDNIGHT</span><wbr><span class="t-stroke MB-ita">BLACKTOP</span></div>
   <a class="play-btn" href="./mb/midnightblacktop.html" role="button">Play</a>
 </div>
 
