@@ -294,7 +294,6 @@
 <body>
   
   <!-- Hidden outbound link for mobile-safe target=_blank navigation -->
-  <a id="rsgOutboundLink" href="https://ryosatoanime.github.io/RSG/index.html" target="_blank" rel="noopener noreferrer" style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;">RSG</a>
 <div class="page">
     <div class="linkBar">
       <a class="label" href="https://ryosatoanime.github.io/RSG/index.html" target="_blank" rel="noopener noreferrer">Ryo Sato Games</a>
@@ -995,9 +994,7 @@ Collect magenta pickups to recover AMMO.
       if (arsamAppState === ARSAM_APP_STATE.TITLE){
         const now = Date.now();
         if (now < suppressTitleLinkUntil) return;
-        const rsgLink = document.getElementById('rsgOutboundLink');
-        if (rsgLink && typeof rsgLink.click === 'function') rsgLink.click();
-        else window.open('https://ryosatoanime.github.io/RSG/index.html', '_blank', 'noopener,noreferrer');
+        window.location.href = 'https://ryosatoanime.github.io/RSG/index.html';
         return;
       }
       if (arsamAppState === ARSAM_APP_STATE.PLAY) arsamEmergencyExitToTitle();
