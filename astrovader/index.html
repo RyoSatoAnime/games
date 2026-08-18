@@ -19,11 +19,15 @@
   * { -webkit-tap-highlight-color: transparent; }
 
   .page{
-    max-width: 820px; margin: 0 auto; padding: 10px 10px 18px;
-    display:flex; flex-direction:column; align-items:center; gap:10px;
+    display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    padding:12px 0 0;
   }
+  html.is-mobile-platform .page{ padding-top:4px; }
 
-  .topbar{ width:100%; display:none; justify-content:space-between; align-items:center; gap:10px; }
+  .mobileScaleRoot{ width:600px; max-width:100%; margin:0 auto; }
+  html.is-mobile-platform .mobileScaleRoot{ width:min(96vmin, 100%, 600px); }
+
+  .topbar{ width:600px; max-width:100%; margin:6px auto 8px; display:none; justify-content:space-between; align-items:center; gap:10px; }
   .square-btn{ width:68px; height:68px; border:2px solid #fff; border-radius:12px;
     display:grid; place-items:center; background:transparent; color:#fff; cursor:pointer; touch-action:manipulation; user-select:none; }
   .square-btn:active{ transform: translateY(1px); }
@@ -32,37 +36,57 @@
   .square-btn.muted .slash{ display:block; }
   .slash{ display:none; }
 
-  .stageWrap{ width:100%; display:flex; justify-content:center; }
+  .stageWrap{ width:600px; max-width:100%; margin:6px auto 0; display:flex; justify-content:center; }
   canvas#game{ border:1px solid #fff; display:block; width:600px; height:auto;
     image-rendering: pixelated; background:#000; touch-action:none; outline:none; }
 
-  #controls{ width:600px; max-width:100%; margin-top:6px;
+  #controls{ width:600px; max-width:100%; margin:16px auto;
     display:flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap;
     font:14px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; user-select:none; }
 
   .pad{
-    width:100%;
-    margin-top:10px;
+    width:600px;
+    max-width:100%;
+    margin:10px auto 0;
     display:none;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: 1fr 1fr 2fr;
     column-gap:10px;
   }
 
-  @media (pointer: coarse), (max-width: 820px){
-    .topbar{ display:flex; }
-    .pad{ display:grid; }
-    #controls, .hint{ display:none; }
-    canvas#game{ width:min(96vmin, 100%); }
-  }
+  html.is-mobile-platform .topbar{ display:flex; }
+  html.is-mobile-platform .pad{ display:grid; }
+  html.is-mobile-platform .topbar,
+  html.is-mobile-platform .stageWrap,
+  html.is-mobile-platform .pad{ width:100%; }
+  html.is-mobile-platform #controls,
+  html.is-mobile-platform .hint{ display:none; }
+  html.is-mobile-platform canvas#game{ width:min(96vmin, 100%); }
 
-  .pad .half{ height: 88px; border:2px solid #fff; border-radius:14px;
-    display:grid; place-items:center; background:transparent; touch-action:manipulation; user-select:none; }
+  .pad .half{ height: 80px; border:2px solid #fff; border-radius:14px;
+    display:flex; align-items:center; justify-content:center; background:transparent; color:#fff; touch-action:manipulation; user-select:none; }
   .pad .half:active, .reflectBtn:active{ transform: translateY(1px); }
-  .arrow{ width:44px; height:44px; }
-  .arrow svg{ width:100%; height:100%; stroke:#fff; fill:none; stroke-width:3; }
+  .arrow{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:36px;
+    height:36px;
+  }
+  .arrow svg{
+    width:36px;
+    height:36px;
+    display:block;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:2px;
+    stroke-linejoin:round;
+    stroke-linecap:round;
+  }
+  #btnLeft .arrow svg{ transform: translateX(-2px); }
+  #btnRight .arrow svg{ transform: translateX(2px); }
 
-  .reflectBtn{ height: 88px; aspect-ratio:1/1; border:2px solid #fff; border-radius:14px;
-    background:#000; display:grid; place-items:center; position:relative; overflow:hidden; }
+  .reflectBtn{ height: 80px; border:2px solid #fff; border-radius:14px;
+    background:#000; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
   .reflectBtn canvas{ width:100%; height:100%; display:block; }
 
   .hint{ width:100%; text-align:center; opacity:.85; font:13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; user-select:none; }
@@ -79,22 +103,34 @@
   }
 
 .howtoBar{ width:600px; max-width:100%; margin:6px auto 4px; text-align:center; color:#fff; }
-.howtoBar .label{ font-family:"Arial Black", Arial, Helvetica, sans-serif; font-weight:900; font-size:16px; line-height:1.1; }
-@media (pointer: coarse){ .howtoBar{ display:none; } }
-.topbar .label{ font-family:"Arial Black", Arial, Helvetica, sans-serif; font-weight:900; font-size:18px; line-height:1; color:#fff; }
-@media (pointer: coarse){
-  .topbar{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
-  .topbar #btnTitle{ flex:0 0 auto; }
-  .topbar #btnMute{ flex:0 0 auto; }
-  .topbar #btnHowto{ flex:1 1 auto; }
+.howtoBar .label{ font-family:"Arial Black", Arial, Helvetica, sans-serif; font-weight:900; font-size:16px; line-height:1.1; text-decoration:none; color:#fff; display:inline-block; padding-bottom:9px; }
+html.is-mobile-platform .howtoBar{ display:none; }
+.topbar .label{
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  font-weight:800; font-size:16px; letter-spacing:0.03em; line-height:1; color:#fff;
 }
-@media (pointer: fine){ .topbar{ display:none; } }
-#controls #ctrlSpeaker .slash{ display:none; }
-#controls.muted #ctrlSpeaker .slash, #controls #ctrlSpeaker.muted .slash{ display:block; }
-#controls.bgmOff #ctrlNote .slash{ display:block; }
-
-#btnMute .iconMobileSpeaker .slash{ display:none; }
-#btnMute.muted .iconMobileSpeaker .slash{ display:block; }
+html.is-mobile-platform .topbar{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+html.is-mobile-platform .topbar button{ flex:0 1 auto; }
+html.is-mobile-platform .topbar .square-btn{
+  width:auto;
+  height:60px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 14px;
+  border-radius:10px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  font-weight:800;
+  font-size:16px;
+  letter-spacing:0.03em;
+}
+html.is-mobile-platform .topbar #btnTitle,
+html.is-mobile-platform .topbar #btnMute{ flex:0 0 56px; aspect-ratio:1/1; }
+html.is-mobile-platform .topbar #btnHowto{ flex:1 1 auto; white-space:nowrap; text-align:center; font-size:16px; }
+#btnMute .icon-speaker{ transform: translateX(1px); }
+#btnMute .icon-note-wrap{ transform: translateX(0px) scaleX(1.25); transform-origin:50% 50%; }
+#btnMute .iconMobileSpeaker .slash, #ctrlAudio .slash{ display:none; }
+#btnMute.muted .iconMobileSpeaker .slash, #ctrlAudio.muted .slash{ display:block; }
 
 /* === HowTo overlay === */
 #howtoOverlay{
@@ -122,7 +158,7 @@
 }
 
 :root{
-  --astro-version: "v1.1.0"; /* バージョン */
+  --astro-version: "v1.2.0"; /* バージョン */
   --astro-xinput: "XInput supported";
 }
 
@@ -244,36 +280,6 @@
     align-self: start !important;
     margin-top: 0 !important;
   }
-}
-
-/* ===== FORCE DESKTOP UI (Xbox/Edge -> disable mobile layout) =====
-   This forcibly disables the mobile UI rules and restores desktop controls.
-   Add this at the end of the stylesheet so it overrides earlier @media rules.
-*/
-@media all {
-  /* hide mobile-only topbar / pad */
-  .topbar { display: none !important; }
-
-  /* disable on-screen pad */
-  .pad { display: none !important; }
-
-  /* ensure desktop control line is visible */
-  #controls { display: flex !important; }
-
-  /* ensure play-canvas uses desktop sizing (fixed 600px but still responsive) */
-  canvas#game { width: 600px !important; max-width: 100% !important; }
-
-  /* show howtoBar (PC link) */
-  .howtoBar { display: block !important; }
-
-  /* make hints visible if they were hidden */
-  .hint { display: block !important; }
-
-  /* override any mobile-specific padding/layout for howto overlay */
-  #howtoOverlay .howto-panel { width: fit-content !important; padding: 28px 22px 24px !important; }
-
-  /* ensure mobile-specific rules that hide desktop UI are overridden */
-  #controls, .howtoBar, .hint { visibility: visible !important; opacity: 1 !important; }
 }
 
 </style>
@@ -1236,50 +1242,59 @@ function rebuildAllSteps(){
 
 <style>
 /* === Mute button icon variants === */
-.square-btn .icon-note { display: none; }
-.square-btn.state1 .icon-note { display: block !important; }
-.square-btn.state1 .icon-speaker { display: none !important; }
+.square-btn .icon-note, #ctrlAudio .icon-note { display: none; }
+.square-btn.state1 .icon-note, #ctrlAudio.state1 .icon-note { display: block !important; }
+.square-btn.state1 .icon-speaker, #ctrlAudio.state1 .icon-speaker { display: none !important; }
 /* states 0 and 2: speaker visible by default */
 </style>
 </head>
 <body>
 <div class="page">
-  <div class="topbar">
-    <button id="btnTitle" class="square-btn" aria-label="Back to Title"><span class="label" aria-hidden="true">Title</span></button>
-        <button id="btnHowto" class="square-btn" aria-label="How To Play"><span class="label" aria-hidden="true">Y : How To Play</span></button>
-  <button id="btnMute" class="square-btn" aria-label="Toggle Mute"><svg class="iconMobileSpeaker" viewBox="0 0 24 24" aria-hidden="true" style="width:2.1em; height:2.1em; display:block;"><g class="icon-speaker"><polygon points="4,9 8,9 12,6 12,18 8,15 4,15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></polygon><path d="M14 9 Q17 12 14 15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path><path d="M16 7 Q21 12 16 17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path></g>
-      <g class="icon-note-wrap" transform="translate(12 13) scale(1.4 1) translate(-12 -13)">
-      <text class="icon-note"
-        x="11" y="13" text-anchor="middle" dominant-baseline="middle"
-        font-size="23" font-weight="700" fill="currentColor">♫</text>
-      </g>
-  <line class="slash" x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></line></svg></button>
-  </div>
+    <div class="howtoBar">
+    <a class="label" href="https://ryosatoanime.github.io/RSG/index.html" target="_blank" rel="noopener noreferrer">Ryo Sato Games</a>
+    </div>
 
-    <div class="howtoBar" aria-label="How To Play (PC)">
-    <span class="label" id="pcHowtoLink" role="button" tabindex="0" style="cursor:pointer;">How To Play</span>
+  <div class="mobileScaleRoot">
+  <div class="topbar">
+    <button id="btnTitle" class="square-btn" aria-label="RSG Home" data-mode="rsg"><span class="label" aria-hidden="true">RSG</span></button>
+        <button id="btnHowto" class="square-btn" aria-label="How To Play"><span class="label" aria-hidden="true">How To Play</span></button>
+  <button id="btnMute" class="square-btn" aria-label="Toggle Mute"><svg class="iconMobileSpeaker" viewBox="0 0 24 24" aria-hidden="true" style="width:2.1em; height:2.1em; display:block;"><g class="icon-speaker"><polygon points="4,9 8,9 12,6 12,18 8,15 4,15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></polygon><path d="M14 9 Q17 12 14 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path><path d="M16 7 Q21 12 16 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></g>
+      <g class="icon-note-wrap">
+      <g class="icon-note" transform="translate(1 2) scale(0.08)" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="22">
+        <circle cx="180" cy="172" r="28"></circle>
+        <circle cx="74" cy="204" r="28"></circle>
+        <polyline points="104 204 104 64 208 32 208 172"></polyline>
+        <polyline points="104 104 208 72"></polyline>
+      </g>
+      </g>
+  <line class="slash" x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></line></svg></button>
   </div>
   <div class="stageWrap" style="position:relative;">
     <canvas id="game" width="600" height="600" aria-label="Astrovader" tabindex="0"></canvas>
     
   </div>
 <div id="controls" aria-label="Controls">
-    <span>← → : Move | A or B : Reflect | Start : Pause | X : <svg id="ctrlNote" viewBox="0 0 24 24" aria-hidden="true" style="width:1.1em; height:1.1em; vertical-align:-0.12em;"><text x="12" y="15" text-anchor="middle" dominant-baseline="middle" font-size="19" font-weight="700" fill="currentColor" transform="translate(12 13) scale(1.4 1) translate(-12 -13)">♫</text><line class="slash" x1="5" y1="5" x2="22" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg> | Y : <svg id="ctrlSpeaker" viewBox="0 0 24 24" aria-hidden="true" style="width:1.2em; height:1.2em; vertical-align:middle;"><polygon points="4,9 8,9 12,6 12,18 8,15 4,15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></polygon><path d="M14 9 Q17 12 14 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M16 7 Q21 12 16 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><line class="slash" x1="3" y1="3" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg></span>
+    <span>← → : Move | Z : Reflect | Space : Pause | H : HowTo | Esc : Title | M : <svg id="ctrlAudio" class="iconMobileSpeaker" viewBox="0 0 24 24" aria-hidden="true" style="width:1.2em; height:1.2em; vertical-align:middle; cursor:pointer;"><g class="icon-speaker"><polygon points="4,9 8,9 12,6 12,18 8,15 4,15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></polygon><path d="M14 9 Q17 12 14 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M16 7 Q21 12 16 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></g><g class="icon-note-wrap" transform="translate(12 13) scale(1.4 1) translate(-12 -13)"><text class="icon-note" x="11" y="13" text-anchor="middle" dominant-baseline="middle" font-size="23" font-weight="700" fill="currentColor">♫</text></g><line class="slash" x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg></span>
   </div>
 
   <div class="pad" aria-label="Move & Reflect pad">
     <button id="btnLeft"  class="half" aria-label="Move Left">
       <span class="arrow" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><polyline points="15,4 7,12 15,20" /><line x1="8" y1="12" x2="22" y2="12"/></svg>
+        <svg viewBox="0 0 24 24">
+          <polygon points="18,5 4,12 18,19" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+      </span>
+    </button>
+    <button id="btnRight" class="half" aria-label="Move Right">
+      <span class="arrow" aria-hidden="true">
+        <svg viewBox="0 0 24 24">
+          <polygon points="6,5 20,12 6,19" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
       </span>
     </button>
     <button id="btnReflect" class="reflectBtn" aria-label="Reflect"><canvas id="reflectCanvas"></canvas>
     </button>
-    <button id="btnRight" class="half" aria-label="Move Right">
-      <span class="arrow" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><polyline points="9,4 17,12 9,20" /><line x1="2" y1="12" x2="16" y2="12"/></svg>
-      </span>
-    </button>
+  </div>
   </div>
 </div>
 <!-- How To Play Overlay -->
@@ -1289,8 +1304,7 @@ function rebuildAllSteps(){
     <div class="howto-panel" role="document">
       <h2 class="howto-title en">Strafe. Reflect. Collect orbs.</h2>
       <pre class="howto-pre en">
-Move : ← →, Reflect : A or B, Mute Music : X, Mute : Y
-Reflect takes 1second to recharge.
+Reflect takes 1s to recharge.
 Reflected kills: 2× score, 1-hit, chainable
 Orbs raise multiplier: Yellow +1, Orange +2
 Asteroids have levels (1–2). 
@@ -1298,11 +1312,11 @@ Level 2 : ×2 Durability / Counter / Score</pre>
 
       <h2 class="howto-title ja">回避・反射・オーブ回収</h2>
       <pre class="howto-pre ja">
-移動：← →　反射：A or B　BGMミュート：X　ミュート：Y
 反射は再装填に１秒
 反射撃破：得点２倍・全敵一撃・連鎖可
 オーブ取得で倍率UP → 黄 +1 /オレンジ +1 
-隕石にはレベル(１・２)がありレベル２は耐久・反撃・得点が2倍</pre>
+隕石にはレベル(１・２)があり
+レベル２は耐久・反撃・得点が2倍</pre>
 
       <div class="howto-footer">Click / Tap to go back</div>
     </div>
@@ -1325,6 +1339,16 @@ const CYAN_MIN_LIFE = 3.0; // minimum remaining life (s) guaranteed on red->cyan
     return;
   }
   window.__ASTROVADER_INITED__ = true;
+
+  const ua = navigator.userAgent || "";
+  const isIOS =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+  const isMobilePlatform = isIOS || isAndroid;
+  if (isMobilePlatform) {
+    document.documentElement.classList.add("is-mobile-platform");
+  }
 
   /*** iOS/モバイル対策（ジェスチャ抑止 & ダブルタップズーム抑止） ***/
   document.addEventListener('contextmenu', e => e.preventDefault(), {passive:false});
@@ -1723,14 +1747,6 @@ const BGM = (() => {
     applyAudibility();
   }
 
-  // キーボード：MでBGMのみON/OFF（任意／UI完成まで）
-addEventListener("keydown", e => {
-  if (e.code === "KeyM") {
-    setEnabled(!BGM_ENABLED);
-    try { syncMuteUI(); } catch (_){}
-  }
-}, { passive: false });
-
   // コンソール用ヘルパ
   window.setBGMEnabled = setEnabled;
   window.toggleBGM = () => setEnabled(!BGM_ENABLED);
@@ -1788,35 +1804,92 @@ function _setUp(dir){   _hori.pressed[dir] = false;
   const btnRight=document.getElementById("btnRight");
   const btnReflect=document.getElementById("btnReflect");
 
-  btnTitle.addEventListener("pointerdown", e=>{ e.preventDefault(); SFX.unlock(); goTitle(); });
+  const RSG_HOME_URL = "https://ryosatoanime.github.io/RSG/index.html";
+
+  function updateTitleButtonLabel(){
+    if (!btnTitle) return;
+    const isRsgMode = state === "title";
+    const labelEl = btnTitle.querySelector(".label");
+    if (labelEl) labelEl.textContent = isRsgMode ? "RSG" : "Title";
+    else btnTitle.textContent = isRsgMode ? "RSG" : "Title";
+    btnTitle.dataset.mode = isRsgMode ? "rsg" : "title";
+    btnTitle.setAttribute("aria-label", isRsgMode ? "RSG Home" : "Title");
+  }
+  updateTitleButtonLabel();
+
+  if (btnTitle) {
+    btnTitle._suppressNextClick = false;
+
+    btnTitle.addEventListener("click", (e)=>{
+      if (btnTitle._suppressNextClick){
+        btnTitle._suppressNextClick = false;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (btnTitle.dataset.mode !== "rsg") return;
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.href = RSG_HOME_URL;
+    }, { passive:false });
+
+    btnTitle.addEventListener("pointerdown", (e)=>{
+      if (btnTitle.dataset.mode === "rsg"){
+        // Let the following real click handle navigation. This is more reliable on iOS Safari.
+        return;
+      }
+      btnTitle._suppressNextClick = true;
+      e.preventDefault();
+      e.stopPropagation();
+      SFX.unlock();
+      goTitle();
+    }, { passive:false });
+  }
   
-  // === Mobile 3-state mute for top-right button ===
-  const MOBILE_MUTE_KEY = "av_mobile_mute_state";
-  function isMobileCoarse(){ try{ return window.matchMedia && window.matchMedia("(pointer: coarse)").matches; }catch(e){ return false; } }
-  function loadMobileMuteState(){ try{ const v = parseInt(localStorage.getItem(MOBILE_MUTE_KEY)||"0",10); return (isNaN(v)?0:(v%3+3)%3); }catch(e){ return 0; } }
-  function saveMobileMuteState(v){ try{ localStorage.setItem(MOBILE_MUTE_KEY, String(v)); }catch(e){} }
-  window.__MOBILE_MUTE_STATE__ = loadMobileMuteState();
-  function applyMobileMuteState(){
-    const st = (window.__MOBILE_MUTE_STATE__|0);
+  // === Shared 3-state Audio mode ===
+  const AUDIO_MODE_KEY = "av_audio_mode";
+  function loadAudioMode(){ try{ const v = parseInt(localStorage.getItem(AUDIO_MODE_KEY)||"0",10); return (isNaN(v)?0:(v%3+3)%3); }catch(e){ return 0; } }
+  function saveAudioMode(v){ try{ localStorage.setItem(AUDIO_MODE_KEY, String(v)); }catch(e){} }
+  let audioMode = loadAudioMode();
+  function applyAudioMode(){
+    const st = (audioMode|0);
     if (st === 0){ if (SFX.muted) SFX.toggle(); try{ BGM.setGlobalMute(false); BGM.setEnabled(true); }catch(e){} }
     else if (st === 1){ if (SFX.muted) SFX.toggle(); try{ BGM.setGlobalMute(false); BGM.setEnabled(false); }catch(e){} }
     else { if (!SFX.muted) SFX.toggle(); try{ BGM.setEnabled(false); BGM.setGlobalMute(true); }catch(e){} }
   }
-  // Apply on load (mobile only)
-  if (isMobileCoarse()) { applyMobileMuteState(); }
+  function cycleAudioMode(){
+    audioMode = ((audioMode|0)+1)%3;
+    saveAudioMode(audioMode);
+    applyAudioMode();
+    syncAudioUI();
+  }
+  function syncAudioUI(){
+    try{
+      const st = (audioMode|0);
+      const cls = st===0?"state0":(st===1?"state1":"state2");
+      [btnMute, document.getElementById("ctrlAudio")].forEach(el=>{
+        if (!el) return;
+        el.classList.remove("state0","state1","state2");
+        el.classList.add(cls);
+        el.classList.toggle("muted", st !== 0);
+      });
+    }catch(e){}
+  }
+  applyAudioMode();
+  syncAudioUI();
 btnMute.addEventListener("pointerdown", e=>{
   e.preventDefault();
   SFX.unlock();
-  if (isMobileCoarse()){
-    window.__MOBILE_MUTE_STATE__ = ((window.__MOBILE_MUTE_STATE__|0)+1)%3;
-    saveMobileMuteState(window.__MOBILE_MUTE_STATE__);
-    applyMobileMuteState();
-  } else {
-    SFX.toggle();
-    BGM.setGlobalMute(SFX.muted);
-  }
-  syncMuteUI();
+  cycleAudioMode();
 });
+  const ctrlAudio = document.getElementById("ctrlAudio");
+  if (ctrlAudio){
+    ctrlAudio.addEventListener("pointerdown", e=>{
+      e.preventDefault();
+      SFX.unlock();
+      cycleAudioMode();
+    });
+  }
 function hold(btn, onDown, onUp){
     btn.addEventListener("pointerdown", e=>{ e.preventDefault(); SFX.unlock(); onDown(); btn.setPointerCapture?.(e.pointerId); });
     const end=()=> onUp();
@@ -1849,24 +1922,6 @@ function hold(btn, onDown, onUp){
   });
 
   document.addEventListener("visibilitychange", ()=>{ if(document.hidden && state==="running") pauseGame(); });
-  function syncMuteUI(){
-  try{
-    const mobile = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-    btnMute.classList.remove("state0","state1","state2");
-    if (mobile){
-      const st = (window.__MOBILE_MUTE_STATE__ ?? 0) | 0;
-      btnMute.classList.add(st===0?"state0":(st===1?"state1":"state2"));
-      btnMute.classList.toggle("muted", st !== 0);
-    } else {
-      btnMute.classList.add(SFX.muted ? "state2" : "state0");
-      btnMute.classList.toggle("muted", SFX.muted);
-    }
-    const ctrls = document.getElementById("controls");
-    if (ctrls) ctrls.classList.toggle("muted", SFX.muted);
-  
-    if (ctrls) ctrls.classList.toggle("bgmOff", !BGM_ENABLED);
-}catch(e){}
-}
 
 
 /*** ===== Reflect button canvas ===== ***/
@@ -1909,7 +1964,7 @@ function drawReflectButton(){
   rbCtx.font = "700 " + Math.floor(RB_H * 0.55) + "px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
   rbCtx.textAlign = "center";
   rbCtx.textBaseline = "middle";
-  rbCtx.fillText("R", RB_W/2, RB_H/2);
+  rbCtx.fillText("R", RB_W/2, RB_H/2 + 3);
 }
 
   /*** ===== Collections & helpers ===== ***/
@@ -2109,7 +2164,7 @@ function drawOrbs(){
     ctx.textAlign="right"; ctx.fillText(`HIGH: ${highScore} (x${Math.max(1,highMult)})`, W-10, 10);
     ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font="900 100px system-ui, Arial Black, Impact, sans-serif";
     ctx.lineWidth=2; ctx.strokeStyle=FG; ctx.strokeText("Astrovader",W/2,H/2); ctx.fillStyle=FG; ctx.fillText("Astrovader",W/2,H/2);
-    ctx.font="18px system-ui, sans-serif"; ctx.fillText("Press start", W/2, H*0.80); ctx.textAlign="left";
+    ctx.font="18px system-ui, sans-serif"; ctx.fillText("Press / Doubletap to start", W/2, H*0.80); ctx.textAlign="left";
     // --- Credits (bottom row) ---
     ctx.save();
     ctx.textBaseline = "alphabetic";      // 下端揃えで配置
@@ -2397,6 +2452,7 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
     }
     blockGameOverInputUntil = logicMs + 1000;
     SFX.gameOverBoom();
+    updateTitleButtonLabel();
   }
 
   function resetRunData(){
@@ -2413,12 +2469,14 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
     bgY = HEADER_BLACK_START; // start from bottom black header
     state="running"; startTextUntil=logicMs+2000; SFX.startBween();
     focusGame();
+    updateTitleButtonLabel();
   }
   function goTitle(){
     BGM.stop();
 
     resetRunData(); state="title"; SFX.startJingle();
     focusGame();
+    updateTitleButtonLabel();
   }
 
   function pauseGame(){
@@ -2428,6 +2486,7 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
     state="paused";
     prevReal = performance.now();
     accum = 0;
+    updateTitleButtonLabel();
   }
   function resumeGame(){
     BGM.resume();
@@ -2436,6 +2495,7 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
     prevReal = performance.now();
     accum = 0;
     state="running";
+    updateTitleButtonLabel();
   }
   function togglePause(){ (state==="running")?pauseGame(): (state==="paused")&&resumeGame(); }
 
@@ -2500,35 +2560,8 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
     }catch(e){ log('synthKey err', e); }
   }
 
-  // try flexible music toggle
-  function toggleMusicViaBGM(){
-    try{
-      if (typeof window.toggleMusic === 'function'){ window.toggleMusic(); return; }
-      if (typeof window.BGM !== 'undefined'){
-        if (typeof BGM.toggle === 'function'){ BGM.toggle(); return; }
-        if (typeof BGM.setGlobalMute === 'function'){
-          const cur = (typeof BGM.muted !== 'undefined') ? !!BGM.muted : (typeof BGM.getGlobalMute === 'function' ? !!BGM.getGlobalMute() : false);
-          BGM.setGlobalMute(!cur);
-          if (typeof BGM.muted !== 'undefined') BGM.muted = !cur;
-          return;
-        }
-        if (typeof BGM.muted !== 'undefined'){
-          BGM.muted = !BGM.muted;
-          if (typeof BGM.setMute === 'function') BGM.setMute(BGM.muted);
-          if (typeof BGM.setPaused === 'function') BGM.setPaused(BGM.muted);
-          return;
-        }
-      }
-      // fallback to KeyM
-      const ev = new KeyboardEvent('keydown', {code:'KeyM', key:'m', bubbles:true});
-      document.dispatchEvent(ev);
-    }catch(e){ log('toggleMusic err', e); }
-  }
-
   // Universal handlers: we accept a range of button indices for reflect/music/sfx
   const REFLECT_CANDIDATES = [0,1]; // A,B,X usually
-  const MUSIC_CANDIDATES = [2];       // prefer X (2) but we'll also accept 0..3 if needed
-  const SFX_CANDIDATES   = [3];       // Y usually
 
   function handleButtonDown(index, btnIdx){
     log('btnDown', index, btnIdx);
@@ -2539,15 +2572,9 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
       return;
     }
 
-    // If exactly matches MUSIC_CANDIDATES OR if it's in 0..3 but not START/BACK -> treat as possible music
-    if (MUSIC_CANDIDATES.indexOf(btnIdx) >= 0 || (btnIdx >=0 && btnIdx <=3 && btnIdx === 2)){
-      try{ toggleMusicViaBGM(); if (typeof syncMuteUI === 'function') syncMuteUI(); }catch(e){ log('music err', e); }
-      return;
-    }
-
-    // SFX toggle (Y)
-    if (SFX_CANDIDATES.indexOf(btnIdx) >= 0 || btnIdx === 3){
-      try{ SFX.toggle(); if (typeof BGM !== 'undefined' && typeof BGM.setGlobalMute === 'function') BGM.setGlobalMute(SFX.muted); if (typeof syncMuteUI === 'function') syncMuteUI(); }catch(e){ log('sfx err', e); }
+    // Audio mode cycle (Y)
+    if (btnIdx === 3){
+      try{ cycleAudioMode(); }catch(e){ log('audio err', e); }
       return;
     }
 
@@ -2673,14 +2700,24 @@ const RESTART_KEYS     = new Set(["ArrowLeft","ArrowRight","KeyZ","KeyR","Enter"
 addEventListener("keydown", (e) => {
   SFX.unlock();
 
+  // HowTo: title の早期returnより前で処理（title / running / paused / gameover すべてで有効）
+  if (e.code === "KeyH") {
+    e.preventDefault();
+    const b = document.getElementById("btnHowto");
+    if (b) b.click();
+    else if (typeof showHowTo === "function") showHowTo();
+    return;
+  }
+
+  // Audio mode (M)
+  if (e.code === "KeyM") {
+    e.preventDefault();
+    cycleAudioMode();
+    return;
+  }
+
   // ---- Title ----
   if (state === "title") {
-    if (e.code === "KeyS") {
-      SFX.toggle();
-      BGM.setGlobalMute(SFX.muted);
-      syncMuteUI();
-      return;
-    }
     if (__codeOrKeyMatch__(e, TITLE_START_KEYS)) {
       e.preventDefault();
       startRun();
@@ -2692,13 +2729,6 @@ if (e.code === "ArrowLeft")  { _setDown("left");  e.preventDefault(); }
 if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
   if (state !== "gameover" && e.code === "Escape") { goTitle(); }
   if (e.code === "Space") { e.preventDefault(); togglePause(); }
-
-  // ミュート（SFX）＋BGM無音連動
-  if (e.code === "KeyS") {
-    SFX.toggle();
-    BGM.setGlobalMute(SFX.muted);
-    syncMuteUI();
-  }
 
   // 反射
   if (state === "running" && (e.code === "KeyZ" || e.code === "ArrowUp")) {
@@ -2760,12 +2790,16 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
 
   if (rafId !== null) cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(loop);
-  syncMuteUI();
+  syncAudioUI();
   // === expose minimal hooks for overlays ===
   try {
     window.pauseGame = pauseGame;
     window.resumeGame = resumeGame;
     window.getAstrovaderState = () => state;
+    window.releaseAstrovaderMovement = () => {
+      _setUp("left");
+      _setUp("right");
+    };
   } catch(e){}
 })();
 
@@ -2774,7 +2808,7 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
 <script>
 (function(){
   const overlay = document.getElementById('howtoOverlay');
-  const btns = [ document.getElementById('btnHowto'), document.getElementById('pcHowtoLink') ].filter(Boolean);
+  const btns = [ document.getElementById('btnHowto') ].filter(Boolean);
 
   // 現在のステートに応じて一時ポーズ→閉じたらだけ復帰
   function getState(){
@@ -2784,12 +2818,20 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
     return false; }
   function resume(){ try{ if (typeof window.resumeGame === 'function'){ window.resumeGame(); return true; } }catch(_){}
     return false; }
+  function releaseMovement(){
+    try {
+      if (typeof window.releaseAstrovaderMovement === "function") {
+        window.releaseAstrovaderMovement();
+      }
+    } catch (_) {}
+  }
 
   let pausedByHowto = false;
   let guardsOn = false;
 
   function show(){
     overlay.style.display = 'block';
+    releaseMovement();
     // 走行中だけ一時ポーズ（タイトル/ポーズ中は何もしない）
     pausedByHowto = (getState()==="running") && pause();
     addGuards();
@@ -2801,19 +2843,28 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
   }
 
   // ====== 入力ガード：開いている間は全入力を遮断し、指定キーでだけ閉じる ======
-  const CLOSE_CODES = new Set(["Escape","Enter","ArrowLeft","ArrowRight","ArrowUp","KeyZ","Space","KeyS","KeyM"]);
+  const CLOSE_CODES = new Set(["Escape", "Enter", "Space", "KeyH"]);
   function onKeyGuard(e){
-    if (overlay.style.display !== 'block') return;
+    if (overlay.style.display !== "block") return;
     const code = e.code || "";
-    const key  = e.key  || "";
-    const isSpace = (key === " ");
-    if (CLOSE_CODES.has(code) || CLOSE_CODES.has(key) || (isSpace && CLOSE_CODES.has("Space"))) {
-      e.preventDefault(); e.stopPropagation();
+    const key = e.key || "";
+    const isSpace = key === " ";
+    if (
+      e.type === "keydown" &&
+      (
+        CLOSE_CODES.has(code) ||
+        CLOSE_CODES.has(key) ||
+        (isSpace && CLOSE_CODES.has("Space"))
+      )
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
       hide();
       return;
     }
-    // その他のキーもゲームへは通さない
-    e.preventDefault(); e.stopPropagation();
+    // HowTo表示中は、それ以外のkeydown / keyupをすべてゲームへ通さない
+    e.preventDefault();
+    e.stopPropagation();
   }
  function onPointerGuard(e){
   if (overlay.style.display !== 'block') return;
@@ -2843,14 +2894,14 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
     guardsOn = false;
   }
 
-  // 開く（Topbar/PCリンク）
+  // 開く（mobile btnHowto / keyboard H / gamepad Back）
   btns.forEach(b => {
     if (!b) return;
     b.removeAttribute('aria-disabled');
     b.style.cursor = 'pointer';
     b.addEventListener('click', show, {passive:true});
-    b.addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' ') show(); });
   });
+  try { window.showHowTo = show; } catch(_){}
 
   // 閉じる（どこでもクリックで閉じる）
   overlay.addEventListener('click', hide, {passive:true});
@@ -2873,9 +2924,7 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
   let startedOnce = false;
   let tapCount = 0;
 
-// FORCE DESKTOP: treat all platforms as non-mobile
-function isMobile(){ return false; }
-  const mobile = isMobile();
+  const mobile = document.documentElement.classList.contains("is-mobile-platform");
 
   function kickstart(){
     if(startedOnce) return;
@@ -2918,9 +2967,9 @@ function isMobile(){ return false; }
   }
 
   // キャプチャ段階で最初のタップを握りつぶす（タイトル画面の1回目タップ対策）
-  // window.addEventListener('pointerdown', onPointerCapture, {capture:true, passive:false});
-  // window.addEventListener('touchstart', onTouchStartCapture, {capture:true, passive:false});
-  // window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('pointerdown', onPointerCapture, {capture:true, passive:false});
+  window.addEventListener('touchstart', onTouchStartCapture, {capture:true, passive:false});
+  window.addEventListener('keydown', onKeyDown);
 })();
 </script>
 

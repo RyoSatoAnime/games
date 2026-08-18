@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport"
   content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<title>Astrovader Reflection</title>
+<title>Astrovader</title>
 <style>
 
   :root { color-scheme: dark; }
@@ -44,7 +44,7 @@
     width:100%;
     margin-top:10px;
     display:none;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: 1fr 1fr 2fr;
     column-gap:10px;
   }
 
@@ -61,7 +61,7 @@
   .arrow{ width:44px; height:44px; }
   .arrow svg{ width:100%; height:100%; stroke:#fff; fill:none; stroke-width:3; }
 
-  .reflectBtn{ height: 88px; aspect-ratio:1/1; border:2px solid #fff; border-radius:14px;
+  .reflectBtn{ height: 88px; border:2px solid #fff; border-radius:14px;
     background:#000; display:grid; place-items:center; position:relative; overflow:hidden; }
   .reflectBtn canvas{ width:100%; height:100%; display:block; }
 
@@ -79,7 +79,7 @@
   }
 
 .howtoBar{ width:600px; max-width:100%; margin:6px auto 4px; text-align:center; color:#fff; }
-.howtoBar .label{ font-family:"Arial Black", Arial, Helvetica, sans-serif; font-weight:900; font-size:16px; line-height:1.1; }
+.howtoBar .label{ font-family:"Arial Black", Arial, Helvetica, sans-serif; font-weight:900; font-size:16px; line-height:1.1; text-decoration:none; color:#fff; }
 @media (pointer: coarse){ .howtoBar{ display:none; } }
 .topbar .label{ font-family:"Arial Black", Arial, Helvetica, sans-serif; font-weight:900; font-size:18px; line-height:1; color:#fff; }
 @media (pointer: coarse){
@@ -89,12 +89,8 @@
   .topbar #btnHowto{ flex:1 1 auto; }
 }
 @media (pointer: fine){ .topbar{ display:none; } }
-#controls #ctrlSpeaker .slash{ display:none; }
-#controls.muted #ctrlSpeaker .slash, #controls #ctrlSpeaker.muted .slash{ display:block; }
-#controls.bgmOff #ctrlNote .slash{ display:block; }
-
-#btnMute .iconMobileSpeaker .slash{ display:none; }
-#btnMute.muted .iconMobileSpeaker .slash{ display:block; }
+#btnMute .iconMobileSpeaker .slash, #ctrlAudio .slash{ display:none; }
+#btnMute.muted .iconMobileSpeaker .slash, #ctrlAudio.muted .slash{ display:block; }
 
 /* === HowTo overlay === */
 #howtoOverlay{
@@ -122,7 +118,7 @@
 }
 
 :root{
-  --astro-version: "v1.1.0"; /* バージョン */
+  --astro-version: "v1.1.19"; /* バージョン */
   --astro-xinput: "XInput supported";
 }
 
@@ -244,6 +240,36 @@
     align-self: start !important;
     margin-top: 0 !important;
   }
+}
+
+/* ===== FORCE DESKTOP UI (Xbox/Edge -> disable mobile layout) =====
+   This forcibly disables the mobile UI rules and restores desktop controls.
+   Add this at the end of the stylesheet so it overrides earlier @media rules.
+*/
+@media all {
+  /* hide mobile-only topbar / pad */
+  .topbar { display: none !important; }
+
+  /* disable on-screen pad */
+  .pad { display: none !important; }
+
+  /* ensure desktop control line is visible */
+  #controls { display: flex !important; }
+
+  /* ensure play-canvas uses desktop sizing (fixed 600px but still responsive) */
+  canvas#game { width: 600px !important; max-width: 100% !important; }
+
+  /* show howtoBar (PC link) */
+  .howtoBar { display: block !important; }
+
+  /* make hints visible if they were hidden */
+  .hint { display: block !important; }
+
+  /* override any mobile-specific padding/layout for howto overlay */
+  #howtoOverlay .howto-panel { width: fit-content !important; padding: 28px 22px 24px !important; }
+
+  /* ensure mobile-specific rules that hide desktop UI are overridden */
+  #controls, .howtoBar, .hint { visibility: visible !important; opacity: 1 !important; }
 }
 
 </style>
@@ -1206,17 +1232,17 @@ function rebuildAllSteps(){
 
 <style>
 /* === Mute button icon variants === */
-.square-btn .icon-note { display: none; }
-.square-btn.state1 .icon-note { display: block !important; }
-.square-btn.state1 .icon-speaker { display: none !important; }
+.square-btn .icon-note, #ctrlAudio .icon-note { display: none; }
+.square-btn.state1 .icon-note, #ctrlAudio.state1 .icon-note { display: block !important; }
+.square-btn.state1 .icon-speaker, #ctrlAudio.state1 .icon-speaker { display: none !important; }
 /* states 0 and 2: speaker visible by default */
 </style>
 </head>
 <body>
 <div class="page">
   <div class="topbar">
-    <button id="btnTitle" class="square-btn" aria-label="Back to Title"><span class="label" aria-hidden="true">Title</span></button>
-        <button id="btnHowto" class="square-btn" aria-label="How To Play"><span class="label" aria-hidden="true">How To Play</span></button>
+    <button id="btnTitle" class="square-btn" aria-label="RSG Home" data-mode="rsg"><span class="label" aria-hidden="true">RSG</span></button>
+        <button id="btnHowto" class="square-btn" aria-label="How To Play"><span class="label" aria-hidden="true">Back : How To Play</span></button>
   <button id="btnMute" class="square-btn" aria-label="Toggle Mute"><svg class="iconMobileSpeaker" viewBox="0 0 24 24" aria-hidden="true" style="width:2.1em; height:2.1em; display:block;"><g class="icon-speaker"><polygon points="4,9 8,9 12,6 12,18 8,15 4,15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"></polygon><path d="M14 9 Q17 12 14 15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path><path d="M16 7 Q21 12 16 17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path></g>
       <g class="icon-note-wrap" transform="translate(12 13) scale(1.4 1) translate(-12 -13)">
       <text class="icon-note"
@@ -1226,15 +1252,15 @@ function rebuildAllSteps(){
   <line class="slash" x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></line></svg></button>
   </div>
 
-    <div class="howtoBar" aria-label="How To Play (PC)">
-    <span class="label" id="pcHowtoLink" role="button" tabindex="0" style="cursor:pointer;">How To Play</span>
-  </div>
+    <div class="howtoBar">
+    <a class="label" href="https://ryosatoanime.github.io/RSG/index.html" target="_blank" rel="noopener noreferrer">Ryo Sato Games</a>
+    </div>
   <div class="stageWrap" style="position:relative;">
-    <canvas id="game" width="600" height="600" aria-label="Astrovader Reflection" tabindex="0"></canvas>
+    <canvas id="game" width="600" height="600" aria-label="Astrovader" tabindex="0"></canvas>
     
   </div>
 <div id="controls" aria-label="Controls">
-    <span>← → : Move | Z : Reflect | Space : Pause | Esc : Title | M : <svg id="ctrlNote" viewBox="0 0 24 24" aria-hidden="true" style="width:1.1em; height:1.1em; vertical-align:-0.12em;"><text x="12" y="15" text-anchor="middle" dominant-baseline="middle" font-size="19" font-weight="700" fill="currentColor" transform="translate(12 13) scale(1.4 1) translate(-12 -13)">♫</text><line class="slash" x1="5" y1="5" x2="22" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg> | S : <svg id="ctrlSpeaker" viewBox="0 0 24 24" aria-hidden="true" style="width:1.2em; height:1.2em; vertical-align:middle;"><polygon points="4,9 8,9 12,6 12,18 8,15 4,15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></polygon><path d="M14 9 Q17 12 14 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M16 7 Q21 12 16 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><line class="slash" x1="3" y1="3" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg></span>
+    <span>← → : Move | A or B : Reflect | Start : Pause | Y : <svg id="ctrlAudio" class="iconMobileSpeaker" viewBox="0 0 24 24" aria-hidden="true" style="width:1.2em; height:1.2em; vertical-align:middle; cursor:pointer;"><g class="icon-speaker"><polygon points="4,9 8,9 12,6 12,18 8,15 4,15" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></polygon><path d="M14 9 Q17 12 14 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M16 7 Q21 12 16 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></g><g class="icon-note-wrap" transform="translate(12 13) scale(1.4 1) translate(-12 -13)"><text class="icon-note" x="11" y="13" text-anchor="middle" dominant-baseline="middle" font-size="23" font-weight="700" fill="currentColor">♫</text></g><line class="slash" x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg></span>
   </div>
 
   <div class="pad" aria-label="Move & Reflect pad">
@@ -1243,12 +1269,12 @@ function rebuildAllSteps(){
         <svg viewBox="0 0 24 24"><polyline points="15,4 7,12 15,20" /><line x1="8" y1="12" x2="22" y2="12"/></svg>
       </span>
     </button>
-    <button id="btnReflect" class="reflectBtn" aria-label="Reflect"><canvas id="reflectCanvas"></canvas>
-    </button>
     <button id="btnRight" class="half" aria-label="Move Right">
       <span class="arrow" aria-hidden="true">
         <svg viewBox="0 0 24 24"><polyline points="9,4 17,12 9,20" /><line x1="2" y1="12" x2="16" y2="12"/></svg>
       </span>
+    </button>
+    <button id="btnReflect" class="reflectBtn" aria-label="Reflect"><canvas id="reflectCanvas"></canvas>
     </button>
   </div>
 </div>
@@ -1259,21 +1285,18 @@ function rebuildAllSteps(){
     <div class="howto-panel" role="document">
       <h2 class="howto-title en">Strafe. Reflect. Collect orbs.</h2>
       <pre class="howto-pre en">
-Move: ← →, Reflect: Z key or ↑ / R button
-Reflect takes 1s to recharge.
+Reflect takes 1second to recharge.
 Reflected kills: 2× score, 1-hit, chainable
-Orbs raise multiplier: Yellow +1 / Orange +2
+Orbs raise multiplier: Yellow +1, Orange +2
 Asteroids have levels (1–2). 
 Level 2 : ×2 Durability / Counter / Score</pre>
 
       <h2 class="howto-title ja">回避・反射・オーブ回収</h2>
       <pre class="howto-pre ja">
-移動：← →　反射：Z・↑(PC)／R(モバイル)
 反射は再装填に１秒
 反射撃破：得点２倍・全敵一撃・連鎖可
-オーブ取得で倍率UP → 黄 + 1 /オレンジ + 1 
-隕石にはレベル(１・２)があり
-レベル２は耐久・反撃・得点が2倍</pre>
+オーブ取得で倍率UP → 黄 +1 /オレンジ +1 
+隕石にはレベル(１・２)がありレベル２は耐久・反撃・得点が2倍</pre>
 
       <div class="howto-footer">Click / Tap to go back</div>
     </div>
@@ -1284,8 +1307,7 @@ Level 2 : ×2 Durability / Counter / Score</pre>
 
 
 <script>
-const CYAN_MIN_LIFE = 3.0; // minimum remaining life (s) guaranteed on red->cyan reflection    
-
+const CYAN_MIN_LIFE = 3.0; // minimum remaining life (s) guaranteed on red->cyan reflection
         
         
 (() => {
@@ -1316,11 +1338,6 @@ const CYAN_MIN_LIFE = 3.0; // minimum remaining life (s) guaranteed on red->cyan
   const W=600, H=600, BG="#000", FG="#fff";
   const RED="#f00", YELLOW="#ff0", CYAN="#0ff", MAGENTA="#f0f", ORANGE="#FF8C00", BLUE="#09f";
 
-// === Reflection: collision filters ===
-function fragHitsEnemy(f){ return f.c===CYAN || f.c===MAGENTA; }
-function fragHitsPlayer(f){ return f.c===RED || f.c===MAGENTA; }
-
-
   const PLAYER_BASE=35, PLAYER_HEIGHT=45, PLAYER_SPEED=260, PLAYER_BOTTOM_MARGIN=24, PLAYER_HIT_SCALE=0.5;
   const PLAYER_HIT_Y_OFFSET = 4;
   const BULLET_W=4, BULLET_H=14, BULLET_SPEED=520, FIRE_DELAY=225;
@@ -1334,7 +1351,6 @@ function fragHitsPlayer(f){ return f.c===RED || f.c===MAGENTA; }
 
   const FRAG_R=4, FRAG_SPEED=300, FRAG_LIFETIME=6.0, RED_BURST_DELAY=120;
   const ORB_R=3, ORB_VY=130;
-  const FRAG_SPEED_SCALE = 1.00;
   /* === Background: v2.7 Fix2 G5 (smooth time-mapped density, black header, upward scroll) === */
   const BG_SPEED_BASE = ORB_VY * 0.375;     // 25% slower start (≈48.75 px/s)
   const OFF_TILES = 16;                      // 16 screens tall (9600px)
@@ -1458,12 +1474,12 @@ function drawBackground(){
   const ORB_HIT_SCALE = 4.0; // オーブの当たり判定だけ拡大
 
   // Shield設定（v2.5fix4のオフセット）
-  const SHIELD_RADIUS=40, SHIELD_COOLDOWN=500, SHIELD_CENTER_OFFSET_Y=3;
+  const SHIELD_RADIUS=40, SHIELD_COOLDOWN=1000, SHIELD_CENTER_OFFSET_Y=3;
   const SHIELD_GROW_PIX = 12;
   const FIXED_DT = 1/60; // 60Hz
   const SHIELD_FRAMES = 8;
   const SHIELD_DURATION = SHIELD_FRAMES * FIXED_DT * 1000;  // ≈133ms
-  const SHIELD_PUSH=2.00;
+  const SHIELD_PUSH=2.0;
 
   // 角度テーブル：通常/フル
   const ANG_A_FULL=[0,90,180,270], ANG_A_REDUCED=[270];
@@ -1482,10 +1498,9 @@ function drawBackground(){
   initBackground(); // v2.7 Fix2 G5: prepare starfield
 
   /*** ===== Storage ===== ***/
-const GAME_ID = "reflection";
+const GAME_ID = "astrovader";
 const K = n => `av_${GAME_ID}_${n}`;
 
-// ここを置き換え
 const HS_KEY = K("highscore"), PS_KEY = K("prevscore");
 const HM_KEY = K("highmult"),  PM_KEY = K("prevmult");
 
@@ -1702,14 +1717,6 @@ const BGM = (() => {
     applyAudibility();
   }
 
-  // キーボード：MでBGMのみON/OFF（任意／UI完成まで）
-addEventListener("keydown", e => {
-  if (e.code === "KeyM") {
-    setEnabled(!BGM_ENABLED);
-    try { syncMuteUI(); } catch (_){}
-  }
-}, { passive: false });
-
   // コンソール用ヘルパ
   window.setBGMEnabled = setEnabled;
   window.toggleBGM = () => setEnabled(!BGM_ENABLED);
@@ -1767,47 +1774,101 @@ function _setUp(dir){   _hori.pressed[dir] = false;
   const btnRight=document.getElementById("btnRight");
   const btnReflect=document.getElementById("btnReflect");
 
-  btnTitle.addEventListener("pointerdown", e=>{ e.preventDefault(); SFX.unlock(); goTitle(); });
+  const RSG_HOME_URL = "https://ryosatoanime.github.io/RSG/index.html";
+
+  function updateTitleButtonLabel(){
+    if (!btnTitle) return;
+    const isRsgMode = state === "title";
+    const labelEl = btnTitle.querySelector(".label");
+    if (labelEl) labelEl.textContent = isRsgMode ? "RSG" : "Title";
+    else btnTitle.textContent = isRsgMode ? "RSG" : "Title";
+    btnTitle.dataset.mode = isRsgMode ? "rsg" : "title";
+    btnTitle.setAttribute("aria-label", isRsgMode ? "RSG Home" : "Title");
+  }
+  updateTitleButtonLabel();
+
+  if (btnTitle) {
+    btnTitle._suppressNextClick = false;
+
+    btnTitle.addEventListener("click", (e)=>{
+      if (btnTitle._suppressNextClick){
+        btnTitle._suppressNextClick = false;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (btnTitle.dataset.mode !== "rsg") return;
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.href = RSG_HOME_URL;
+    }, { passive:false });
+
+    btnTitle.addEventListener("pointerdown", (e)=>{
+      if (btnTitle.dataset.mode === "rsg"){
+        // Let the following real click handle navigation. This is more reliable on iOS Safari.
+        return;
+      }
+      btnTitle._suppressNextClick = true;
+      e.preventDefault();
+      e.stopPropagation();
+      SFX.unlock();
+      goTitle();
+    }, { passive:false });
+  }
   
-  // === Mobile 3-state mute for top-right button ===
-  const MOBILE_MUTE_KEY = "av_mobile_mute_state";
-  function isMobileCoarse(){ try{ return window.matchMedia && window.matchMedia("(pointer: coarse)").matches; }catch(e){ return false; } }
-  function loadMobileMuteState(){ try{ const v = parseInt(localStorage.getItem(MOBILE_MUTE_KEY)||"0",10); return (isNaN(v)?0:(v%3+3)%3); }catch(e){ return 0; } }
-  function saveMobileMuteState(v){ try{ localStorage.setItem(MOBILE_MUTE_KEY, String(v)); }catch(e){} }
-  window.__MOBILE_MUTE_STATE__ = loadMobileMuteState();
-  function applyMobileMuteState(){
-    const st = (window.__MOBILE_MUTE_STATE__|0);
+  // === Shared 3-state Audio mode ===
+  const AUDIO_MODE_KEY = "av_audio_mode";
+  function loadAudioMode(){ try{ const v = parseInt(localStorage.getItem(AUDIO_MODE_KEY)||"0",10); return (isNaN(v)?0:(v%3+3)%3); }catch(e){ return 0; } }
+  function saveAudioMode(v){ try{ localStorage.setItem(AUDIO_MODE_KEY, String(v)); }catch(e){} }
+  let audioMode = loadAudioMode();
+  function applyAudioMode(){
+    const st = (audioMode|0);
     if (st === 0){ if (SFX.muted) SFX.toggle(); try{ BGM.setGlobalMute(false); BGM.setEnabled(true); }catch(e){} }
     else if (st === 1){ if (SFX.muted) SFX.toggle(); try{ BGM.setGlobalMute(false); BGM.setEnabled(false); }catch(e){} }
     else { if (!SFX.muted) SFX.toggle(); try{ BGM.setEnabled(false); BGM.setGlobalMute(true); }catch(e){} }
   }
-  // Apply on load (mobile only)
-  if (isMobileCoarse()) { applyMobileMuteState(); }
+  function cycleAudioMode(){
+    audioMode = ((audioMode|0)+1)%3;
+    saveAudioMode(audioMode);
+    applyAudioMode();
+    syncAudioUI();
+  }
+  function syncAudioUI(){
+    try{
+      const st = (audioMode|0);
+      const cls = st===0?"state0":(st===1?"state1":"state2");
+      [btnMute, document.getElementById("ctrlAudio")].forEach(el=>{
+        if (!el) return;
+        el.classList.remove("state0","state1","state2");
+        el.classList.add(cls);
+        el.classList.toggle("muted", st !== 0);
+      });
+    }catch(e){}
+  }
+  applyAudioMode();
+  syncAudioUI();
 btnMute.addEventListener("pointerdown", e=>{
   e.preventDefault();
   SFX.unlock();
-  if (isMobileCoarse()){
-    window.__MOBILE_MUTE_STATE__ = ((window.__MOBILE_MUTE_STATE__|0)+1)%3;
-    saveMobileMuteState(window.__MOBILE_MUTE_STATE__);
-    applyMobileMuteState();
-  } else {
-    SFX.toggle();
-    BGM.setGlobalMute(SFX.muted);
-  }
-  syncMuteUI();
+  cycleAudioMode();
 });
+  const ctrlAudio = document.getElementById("ctrlAudio");
+  if (ctrlAudio){
+    ctrlAudio.addEventListener("pointerdown", e=>{
+      e.preventDefault();
+      SFX.unlock();
+      cycleAudioMode();
+    });
+  }
 function hold(btn, onDown, onUp){
     btn.addEventListener("pointerdown", e=>{ e.preventDefault(); SFX.unlock(); onDown(); btn.setPointerCapture?.(e.pointerId); });
     const end=()=> onUp();
     btn.addEventListener("pointerup", end); btn.addEventListener("pointercancel", end); btn.addEventListener("pointerleave", end);
   }
-
   hold(btnLeft,  ()=> _setDown("left"),  ()=> _setUp("left"));
   hold(btnRight, ()=> _setDown("right"), ()=> _setUp("right"));
-  /* Guard reflect on mobile/PC: only when state === "running" */
   btnReflect.addEventListener("pointerdown", e=>{
-    e.preventDefault();
-    SFX.unlock();
+    e.preventDefault(); SFX.unlock();
     if (state === "running") tryReflect();
   });
 
@@ -1831,24 +1892,6 @@ function hold(btn, onDown, onUp){
   });
 
   document.addEventListener("visibilitychange", ()=>{ if(document.hidden && state==="running") pauseGame(); });
-  function syncMuteUI(){
-  try{
-    const mobile = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-    btnMute.classList.remove("state0","state1","state2");
-    if (mobile){
-      const st = (window.__MOBILE_MUTE_STATE__ ?? 0) | 0;
-      btnMute.classList.add(st===0?"state0":(st===1?"state1":"state2"));
-      btnMute.classList.toggle("muted", st !== 0);
-    } else {
-      btnMute.classList.add(SFX.muted ? "state2" : "state0");
-      btnMute.classList.toggle("muted", SFX.muted);
-    }
-    const ctrls = document.getElementById("controls");
-    if (ctrls) ctrls.classList.toggle("muted", SFX.muted);
-  
-    if (ctrls) ctrls.classList.toggle("bgmOff", !BGM_ENABLED);
-}catch(e){}
-}
 
 
 /*** ===== Reflect button canvas ===== ***/
@@ -1908,12 +1951,11 @@ function drawReflectButton(){
   const diffP = ()=> Math.max(0, Math.min(1, diffMs/DIFF_TOTAL));
   function spawnScale(){ return 1 + 2*diffP(); }
   function intervalFor(type){ const base=(type==="A")?A_BASE_INTERVAL:(type==="B")?B_BASE_INTERVAL:C_BASE_INTERVAL; return base / spawnScale(); }
-  function levelForType(type){
+ function levelForType(type){
   const p = diffP(), d = LV_DELAY[type];
   const pt = (p <= d) ? 0 : (p - d) / (1 - d);
-  return pt >= 0.5 ? 2 : 1;  // ← 3への分岐を削除
+  return pt >= 0.5 ? 2 : 1;
 }
-
   function speedFactor(){ return 1 + 0.5*diffP(); }
 
   /*** ===== Drawing ===== ***/
@@ -2072,6 +2114,7 @@ function drawOrbs(){
     if (runHighBroken) {
   const blink = ((Math.floor((logicMs/160)) % 2) === 0);
   if (blink) {
+    // GAME OVER のY位置に追従しつつ、その“上”に出す
     const GO_Y = H * 0.40;     // GAME OVER のY
     const HS_Y = GO_Y - 60;    // 上側に60pxぶん（好みで調整可）
 
@@ -2090,33 +2133,14 @@ function drawOrbs(){
     ctx.fillText(`PREVIOUS: ${prevScore}  (x${Math.max(1,prevMult)})`,12,10);
     ctx.textAlign="right"; ctx.fillText(`HIGH: ${highScore} (x${Math.max(1,highMult)})`, W-10, 10);
     ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.font="900 100px system-ui, Arial Black, Impact, sans-serif";
-    ctx.lineWidth=2; ctx.strokeStyle=FG;
-    const TITLE_Y = H/2 - 30;
-    ctx.strokeText("Astrovader",W/2,TITLE_Y); ctx.fillStyle=FG; ctx.fillText("Astrovader",W/2,TITLE_Y);
-    // Reflection
-    const REFLECT_GAP = 25;
-    const subY = H/2 + REFLECT_GAP;
-    ctx.save(); // ← 先に save
-    ctx.font = "900 80px system-ui, -apple-system, Segoe UI, Arial, sans-serif";
-    ctx.lineWidth = 3;
-    ctx.lineJoin = "round";
-    ctx.lineCap  = "round";
-    ctx.strokeStyle = "#fff";
-    ctx.fillStyle = "#000";
-    // ① ベース（黒の塗り）
-    ctx.fillText("Reflection", W/2, subY);
-    // ② 白ストローク
-    ctx.strokeText("Reflection", W/2, subY);
-    // ③ 仕上げ（内側をもう一度黒で塗って、ストロークの内側の白を消す）
-    ctx.fillText("Reflection", W/2, subY);
-    ctx.restore();
-    ctx.restore();
-    ctx.font="18px system-ui, sans-serif"; ctx.fillText("Press / Doubletap to start", W/2, H*0.80); ctx.textAlign="left";
+    ctx.lineWidth=2; ctx.strokeStyle=FG; ctx.strokeText("Astrovader",W/2,H/2); ctx.fillStyle=FG; ctx.fillText("Astrovader",W/2,H/2);
+    ctx.font="18px system-ui, sans-serif"; ctx.fillText("Press start", W/2, H*0.80); ctx.textAlign="left";
     // --- Credits (bottom row) ---
     ctx.save();
     ctx.textBaseline = "alphabetic";      // 下端揃えで配置
     ctx.fillStyle = FG;                    // タイトルと同じ前景色
-    ctx.font = "300 12px system-ui, sans-serif"; "12px system-ui, sans-serif"
+    ctx.font = "300 12px system-ui, sans-serif";  // 小さめ＆細字（300が未対応なら "12px system-ui, sans-serif" でOK）
+
     const y = H - 10;                      // 下から10pxの余白
     ctx.textAlign = "left";
     ctx.fillText("A game by Ryo Sato", 10, y);
@@ -2180,7 +2204,7 @@ function drawOrbs(){
     for(const f of frags){ f.x+=f.vx*dtS; f.y+=f.vy*dtS; f.life-=dtS; }
     for(const o of orbs){ o.y+=o.vy*dtS; }
 
-    reflectFragsIfShieldActive(tMs, dtS); enemyAutoFire(tMs); 
+    reflectFragsIfShieldActive(tMs, dtS);
 
     for(let i=delayedSpawns.length-1;i>=0;i--){
       const d=delayedSpawns[i]; if(tMs>=d.at){ spawnFragsNow(d.cx,d.cy,d.angles,d.color); delayedSpawns.splice(i,1); }
@@ -2190,7 +2214,6 @@ function drawOrbs(){
     for(let i=frags.length-1;i>=0;i--){ const f=frags[i]; if(f.life<=0||f.x<-f.r||f.x>W+f.r||f.y<-f.r||f.y>H+f.r) frags.splice(i,1); }
     for(let i=orbs.length-1;i>=0;i--) if(orbs[i].y-orbs[i].r>H) orbs.splice(i,1);
     for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i]; const out=(e.type==="A")?(e.y>H):(e.cy-e.r>H); if(out) enemies.splice(i,1); }
-    
 
     for(let i=enemies.length-1;i>=0;i--){
       const e=enemies[i]; let hit=-1;
@@ -2210,25 +2233,10 @@ function drawOrbs(){
           if (circleRectOverlap(f.x, f.y, f.r, ex, ey, ew, eh)){ idx = k; break; }
         }
       }
-      else{ for(let k=frags.length-1;k>=0;k--){ const f=frags[k]; if (f.c===RED) continue; if(circleCircleOverlap(f.x,f.y,f.r,e.cx,e.cy,e.r)){ idx=k; break; } } }
-      if(idx!==-1){
-        const c = frags[idx].c;
-        if(!fragHitsEnemy({c})) continue; 
-        frags.splice(idx,1);
-        if(c===CYAN){
-　　　　　  killEnemy(i,"cyan", tMs);
-　　　　　}else if(c===MAGENTA){
-  　　　　　if(e.level > 1){
-  　　　　　  e.level -= 1;
- 　　　　　   if (SFX.hit) SFX.hit(); // 任意：手応えの効果音
-  　　　　}else{
-  　　　　  killEnemy(i,"purple", tMs); 
-        }
-      }else{
-      }
-
-      } 
-     // applyProactiveShooting(e, tMs); // 
+      else{ for(let k=frags.length-1;k>=0;k--){ const f=frags[k]; if(circleCircleOverlap(f.x,f.y,f.r,e.cx,e.cy,e.r)){ idx=k; break; } } }
+      if(idx!==-1){ const c=frags[idx].c; frags.splice(idx,1);
+        if(c===CYAN){ killEnemy(i,"cyan", tMs); } else if(c===MAGENTA){ killEnemy(i,"purple", tMs); }
+        else { if(e.level>1){ e.level-=1; SFX.hit(); } else { killEnemy(i,"red", tMs); } } }
     }
 
     const pb=player.bbox;
@@ -2253,25 +2261,21 @@ function drawOrbs(){
   }
 }
 
-　　for(const f of frags){
- 　　 if(fragHitsPlayer(f) && circleRectOverlap(f.x,f.y,f.r,pb.x,pb.y,pb.w,pb.h)){
- 　　   state="gameover"; onGameOver(); break;
-　　  }
-　　}
+    for(const f of frags){ if(circleRectOverlap(f.x,f.y,f.r,pb.x,pb.y,pb.w,pb.h)){ state="gameover"; onGameOver(); break; } }
      if (state === "running"){
-      for (const e of enemies){
-        let col = false;
-        if (e.type === "A"){
-          // inline rect-rect overlap to avoid temporary object
-          const ex = e.x, ey = e.y, ew = e.diag, eh = e.diag;
-          col = (pb.x < ex + ew) && (pb.x + pb.w > ex) && (pb.y < ey + eh) && (pb.y + pb.h > ey);
-        } else {
-          // circle (enemy) vs rect (player)
-          col = circleRectOverlap(e.cx, e.cy, e.r, pb.x, pb.y, pb.w, pb.h);
-        }
-        if (col){ state = "gameover"; onGameOver(); break; }
-      }
-    }
+       for (const e of enemies){
+         let col = false;
+         if (e.type === "A"){
+           // inline rect-rect overlap to avoid temporary object
+           const ex = e.x, ey = e.y, ew = e.diag, eh = e.diag;
+           col = (pb.x < ex + ew) && (pb.x + pb.w > ex) && (pb.y < ey + eh) && (pb.y + pb.h > ey);
+         } else {
+           // circle (enemy) vs rect (player)
+           col = circleRectOverlap(e.cx, e.cy, e.r, pb.x, pb.y, pb.w, pb.h);
+         }
+         if (col){ state = "gameover"; onGameOver(); break; }
+       }
+     }
   }
 
   function drawHUDandScene(){
@@ -2284,7 +2288,7 @@ function drawOrbs(){
   }
 
   /*** ===== Spawners / shooting ===== ***/
-  function fire(tMs){ return; lastFireAt=tMs;
+  function fire(tMs){ if(tMs-lastFireAt<FIRE_DELAY) return; lastFireAt=tMs;
     bullets.push({x:player.x-2, y:player.y-PLAYER_HEIGHT-14, w:4, h:14, vy:-BULLET_SPEED}); }
 
   function spawnFragsNow(cx,cy,angles,color){
@@ -2297,97 +2301,22 @@ function drawOrbs(){
     for(let r=0;r<count;r++) delayedSpawns.push({at:startAtMs+r*RED_BURST_DELAY, cx,cy, angles,color});
   }
 
-// === Reflection: proactive enemy shooting ===
-const TOP_FIRE_BAND = 0.33;   // 上から33%
-const FIRE_BAND_MARGIN = 24;  // 余白（画面入り即発射を防ぐ）
-const EPS_MOVE = 0.02;        // 静止判定（速度のしきい値）
-
-function enemyProactiveAttack(e, tMs){
-  const cx = e.x, cy = e.y; // 必要なら e.cx/e.cy に変更
-  const angles =
-    (e.type === "A") ? ANG_A_REDUCED :
-    (e.type === "B") ? ANG_B_REDUCED :
-                       ANG_C_REDUCED;   // 角度＆本数は元ルールと同じ
-  const reps = Math.max(1, e.spawnLevel || 1);
-  if (reps <= 1) spawnFragsNow(cx, cy, angles, RED);
-  else           scheduleFrags(cx, cy, angles, RED, reps, tMs);
-  // ※ もし *_REDUCED が存在しない場合は ANG_A/B/C に置き換え
-}
-
-function applyProactiveShooting(e, tMs){
-  // --- A/B：上部33%帯にいる間、ランダムな高さで1回だけ発射 ---
-  if (e.type === "A" || e.type === "B"){
-    if (!e._hasProactiveFired){
-      const bandTop = FIRE_BAND_MARGIN;
-      const bandBottom = H * TOP_FIRE_BAND - FIRE_BAND_MARGIN;
-      if (e._proFireY == null){
-        e._proFireY = bandTop + Math.random() * Math.max(1, (bandBottom - bandTop));
-      }
-      if (e.y >= e._proFireY && e.y <= H * TOP_FIRE_BAND){
-        enemyProactiveAttack(e, tMs);
-        e._hasProactiveFired = true;
-      }
-    }
-  }
-  // --- C：移動→停止の遷移ごとに発射 ---
-  else if (e.type === "C"){
-    const speed = Math.hypot(e.vx || 0, e.vy || 0);
-    const moving = speed > EPS_MOVE;
-    if (e._wasMoving === undefined) e._wasMoving = moving;
-    const onScreen = (e.y > -40 && e.y < H + 40); // 画面外の誤発射を抑制
-    if (!moving && e._wasMoving && onScreen){
-      enemyProactiveAttack(e, tMs);
-    }
-    e._wasMoving = moving;
-  }
-}
-
-  const A_RATE = 0.85;
-
   function spawnA(tMs){
-    if (tMs - lastSpawnAAt < intervalFor("A") / A_RATE) return;  // 間隔を1/0.85倍に
-    lastSpawnAAt = tMs;
+    if(tMs-lastSpawnAAt<intervalFor("A")) return; lastSpawnAAt=tMs;
     const diag=A_DIAG, x=Math.floor(rand(0,W-diag)), y=-diag-2, vy=rand(A_MIN_SPD,A_MAX_SPD); const lv=levelForType("A");
-    enemies.push({type:"A", x,y, diag,vy, level:lv, spawnLevel:lv, fireY: rand(0, H*0.40), fired:false }); SFX.spawn();
+    enemies.push({type:"A", x,y, diag,vy, level:lv, spawnLevel:lv}); SFX.spawn();
   }
   function spawnB(tMs){
     if(tMs-lastSpawnBAt<intervalFor("B")) return; lastSpawnBAt=tMs;
     const r=B_R, amp=Math.min(B_SIN_AMP,(W/2)-r-4); const cx0=rand(r+amp,W-r-amp), cy0=-r-2, vy=rand(B_VY_MIN,B_VY_MAX);
     const flip=Math.random()<0.5?1:-1; const lv=levelForType("B");
-    enemies.push({type:"B", cx:cx0,cy:cy0, r,vy, t0:tMs/1000, x0:cx0, amp, flip, level:lv, spawnLevel:lv, fireY: rand(0, H*0.33), fired:false }); SFX.spawn();
+    enemies.push({type:"B", cx:cx0,cy:cy0, r,vy, t0:tMs/1000, x0:cx0, amp, flip, level:lv, spawnLevel:lv}); SFX.spawn();
   }
   function spawnC(tMs){
     if(tMs-lastSpawnCAt<intervalFor("C")) return; lastSpawnCAt=tMs;
     const r=C_R, cx=rand(r+4,W-r-4), cy=-r-2, vy=rand(C_V_MIN,C_V_MAX), vxMag=vy/TAN45, angleIdx=Math.random()<0.5?0:1; const lv=levelForType("C");
-    enemies.push({type:"C", cx,cy, r,vy, vxMag, angleIdx, turn:C_TURN_PERIOD, pause:0, level:lv, spawnLevel:lv, fireY: rand(0, H*0.33), fired:false }); SFX.spawn();
+    enemies.push({type:"C", cx,cy, r,vy, vxMag, angleIdx, turn:C_TURN_PERIOD, pause:0, level:lv, spawnLevel:lv}); SFX.spawn();
   }
-
-function enemyAutoFire(tMs){
-  for(const e of enemies){
-    if(e.type==="A"){
-      // 上から33%内を通過中に1回だけ
-      if(!e.fired && e.y>=0 && e.y<=H*0.40 && e.y>=e.fireY){
-        const cx=e.x+e.diag/2, cy=e.y+e.diag/2;
-        spawnFragsNow(cx,cy, ANG_A_REDUCED, RED);
-        e.fired = true;
-      }
-    }else if(e.type==="B"){
-      if(!e.fired && e.cy>=0 && e.cy<=H*0.33 && e.cy>=e.fireY){
-        spawnFragsNow(e.cx,e.cy, ANG_B_REDUCED, RED);
-        e.fired = true;
-      }
-    }else if(e.type==="C"){
-      // 静止（pause>0）に入ったタイミングで毎回1回
-      if(e.pause>0 && !e.firedOnPause){
-        spawnFragsNow(e.cx,e.cy, ANG_C_REDUCED, RED);
-        e.firedOnPause = true;
-      }else if(e.pause<=0){
-        e.firedOnPause = false;
-      }
-    }
-  }
-}
-
 
   function killEnemy(i,cause, tMs){
     const e=enemies[i]; let cx,cy,base;
@@ -2398,18 +2327,18 @@ function enemyAutoFire(tMs){
       const angles=(e.type==="A")?ANG_A_FULL:(e.type==="B")?ANG_B_FULL:ANG_C_FULL;
       spawnFragsNow(cx,cy,angles,MAGENTA); SFX.killSpecial();
     }else{
+      const angles=(e.type==="A")?ANG_A_REDUCED:(e.type==="B")?ANG_B_REDUCED:ANG_C_REDUCED;
+      const reps=Math.max(1,e.spawnLevel);
+      if(reps<=1) spawnFragsNow(cx,cy,angles,RED); else scheduleFrags(cx,cy,angles,RED,reps,tMs);
       SFX.killNormal();
     }
 
-     if(cause==="cyan"){
-       orbs.push({x:cx,y:cy,r:ORB_R,vy:ORB_VY,color:ORANGE,val:2}); // ← cyanは従来どおり
-　　　}else if(cause==="purple"){
-　　　  orbs.push({x:cx,y:cy,r:ORB_R,vy:ORB_VY,color:YELLOW,val:1}); // ← 黃オーブ, 1 に変更
-     }else{
-       orbs.push({x:cx,y:cy,r:ORB_R,vy:ORB_VY,color:YELLOW,val:1});
-    }
+    if(cause==="cyan" || cause==="purple")
+      orbs.push({x:cx,y:cy,r:ORB_R,vy:ORB_VY,color:ORANGE,val:2});
+    else
+      orbs.push({x:cx,y:cy,r:ORB_R,vy:ORB_VY,color:YELLOW,val:1});
 
-    score += base*e.spawnLevel*multiplier * ((cause==="cyan") ? 2 : 1);
+    score += base*e.spawnLevel*multiplier * ((cause==="cyan"||cause==="purple") ? 2 : 1);
     if(!runHighBroken && score>highScore){
       runHighBroken=true; SFX.newHigh(); triggerTopPopup("Record broken!", "#f33");
     }
@@ -2418,7 +2347,7 @@ function enemyAutoFire(tMs){
 
   /*** ===== ラジアル反射 ===== ***/
   function reflectFragsIfShieldActive(tMs, dt){
-    const SHIELD_GRACE_MS = 10; // 0にすれば従来通り
+    const SHIELD_GRACE_MS = 10;
     if (state!=="running") return;
     if (tMs >= shieldActiveUntil + SHIELD_GRACE_MS) return;
     let hasReflectables = false;
@@ -2493,6 +2422,7 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
     }
     blockGameOverInputUntil = logicMs + 1000;
     SFX.gameOverBoom();
+    updateTitleButtonLabel();
   }
 
   function resetRunData(){
@@ -2509,12 +2439,14 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
     bgY = HEADER_BLACK_START; // start from bottom black header
     state="running"; startTextUntil=logicMs+2000; SFX.startBween();
     focusGame();
+    updateTitleButtonLabel();
   }
   function goTitle(){
     BGM.stop();
 
     resetRunData(); state="title"; SFX.startJingle();
     focusGame();
+    updateTitleButtonLabel();
   }
 
   function pauseGame(){
@@ -2524,6 +2456,7 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
     state="paused";
     prevReal = performance.now();
     accum = 0;
+    updateTitleButtonLabel();
   }
   function resumeGame(){
     BGM.resume();
@@ -2532,6 +2465,7 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
     prevReal = performance.now();
     accum = 0;
     state="running";
+    updateTitleButtonLabel();
   }
   function togglePause(){ (state==="running")?pauseGame(): (state==="paused")&&resumeGame(); }
 
@@ -2596,35 +2530,8 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
     }catch(e){ log('synthKey err', e); }
   }
 
-  // try flexible music toggle
-  function toggleMusicViaBGM(){
-    try{
-      if (typeof window.toggleMusic === 'function'){ window.toggleMusic(); return; }
-      if (typeof window.BGM !== 'undefined'){
-        if (typeof BGM.toggle === 'function'){ BGM.toggle(); return; }
-        if (typeof BGM.setGlobalMute === 'function'){
-          const cur = (typeof BGM.muted !== 'undefined') ? !!BGM.muted : (typeof BGM.getGlobalMute === 'function' ? !!BGM.getGlobalMute() : false);
-          BGM.setGlobalMute(!cur);
-          if (typeof BGM.muted !== 'undefined') BGM.muted = !cur;
-          return;
-        }
-        if (typeof BGM.muted !== 'undefined'){
-          BGM.muted = !BGM.muted;
-          if (typeof BGM.setMute === 'function') BGM.setMute(BGM.muted);
-          if (typeof BGM.setPaused === 'function') BGM.setPaused(BGM.muted);
-          return;
-        }
-      }
-      // fallback to KeyM
-      const ev = new KeyboardEvent('keydown', {code:'KeyM', key:'m', bubbles:true});
-      document.dispatchEvent(ev);
-    }catch(e){ log('toggleMusic err', e); }
-  }
-
   // Universal handlers: we accept a range of button indices for reflect/music/sfx
-  const REFLECT_CANDIDATES = [0,1]; // A,B usually
-  const MUSIC_CANDIDATES = [2];       // prefer X (2) but we'll also accept 0..3 if needed
-  const SFX_CANDIDATES   = [3];       // Y usually
+  const REFLECT_CANDIDATES = [0,1]; // A,B,X usually
 
   function handleButtonDown(index, btnIdx){
     log('btnDown', index, btnIdx);
@@ -2635,15 +2542,9 @@ f.life = Math.min(Math.max(f.life, CYAN_MIN_LIFE), (typeof FRAG_LIFETIME!=='unde
       return;
     }
 
-    // If exactly matches MUSIC_CANDIDATES OR if it's in 0..3 but not START/BACK -> treat as possible music
-    if (MUSIC_CANDIDATES.indexOf(btnIdx) >= 0 || (btnIdx >=0 && btnIdx <=3 && btnIdx === 2)){
-      try{ toggleMusicViaBGM(); if (typeof syncMuteUI === 'function') syncMuteUI(); }catch(e){ log('music err', e); }
-      return;
-    }
-
-    // SFX toggle (Y)
-    if (SFX_CANDIDATES.indexOf(btnIdx) >= 0 || btnIdx === 3){
-      try{ SFX.toggle(); if (typeof BGM !== 'undefined' && typeof BGM.setGlobalMute === 'function') BGM.setGlobalMute(SFX.muted); if (typeof syncMuteUI === 'function') syncMuteUI(); }catch(e){ log('sfx err', e); }
+    // Audio mode cycle (Y)
+    if (btnIdx === 3){
+      try{ cycleAudioMode(); }catch(e){ log('audio err', e); }
       return;
     }
 
@@ -2769,14 +2670,24 @@ const RESTART_KEYS     = new Set(["ArrowLeft","ArrowRight","KeyZ","KeyR","Enter"
 addEventListener("keydown", (e) => {
   SFX.unlock();
 
+  // HowTo: title の早期returnより前で処理（title / running / paused / gameover すべてで有効）
+  if (e.code === "KeyH") {
+    e.preventDefault();
+    const b = document.getElementById("btnHowto");
+    if (b) b.click();
+    else if (typeof showHowTo === "function") showHowTo();
+    return;
+  }
+
+  // Audio mode (M)
+  if (e.code === "KeyM") {
+    e.preventDefault();
+    cycleAudioMode();
+    return;
+  }
+
   // ---- Title ----
   if (state === "title") {
-    if (e.code === "KeyS") {
-      SFX.toggle();
-      BGM.setGlobalMute(SFX.muted);
-      syncMuteUI();
-      return;
-    }
     if (__codeOrKeyMatch__(e, TITLE_START_KEYS)) {
       e.preventDefault();
       startRun();
@@ -2789,19 +2700,11 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
   if (state !== "gameover" && e.code === "Escape") { goTitle(); }
   if (e.code === "Space") { e.preventDefault(); togglePause(); }
 
-  // ミュート（SFX）＋BGM無音連動
-  if (e.code === "KeyS") {
-    SFX.toggle();
-    BGM.setGlobalMute(SFX.muted);
-    syncMuteUI();
-  }
-
   // 反射
   if (state === "running" && (e.code === "KeyZ" || e.code === "ArrowUp")) {
     e.preventDefault();
     tryReflect();
   }
-
 
  // ---- Game Over ----
   if (state === "gameover") {
@@ -2857,20 +2760,25 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
 
   if (rafId !== null) cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(loop);
-  syncMuteUI();
+  syncAudioUI();
   // === expose minimal hooks for overlays ===
   try {
     window.pauseGame = pauseGame;
     window.resumeGame = resumeGame;
     window.getAstrovaderState = () => state;
+    window.releaseAstrovaderMovement = () => {
+      _setUp("left");
+      _setUp("right");
+    };
   } catch(e){}
 })();
+
 </script>
 
 <script>
 (function(){
   const overlay = document.getElementById('howtoOverlay');
-  const btns = [ document.getElementById('btnHowto'), document.getElementById('pcHowtoLink') ].filter(Boolean);
+  const btns = [ document.getElementById('btnHowto') ].filter(Boolean);
 
   // 現在のステートに応じて一時ポーズ→閉じたらだけ復帰
   function getState(){
@@ -2880,12 +2788,20 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
     return false; }
   function resume(){ try{ if (typeof window.resumeGame === 'function'){ window.resumeGame(); return true; } }catch(_){}
     return false; }
+  function releaseMovement(){
+    try {
+      if (typeof window.releaseAstrovaderMovement === "function") {
+        window.releaseAstrovaderMovement();
+      }
+    } catch (_) {}
+  }
 
   let pausedByHowto = false;
   let guardsOn = false;
 
   function show(){
     overlay.style.display = 'block';
+    releaseMovement();
     // 走行中だけ一時ポーズ（タイトル/ポーズ中は何もしない）
     pausedByHowto = (getState()==="running") && pause();
     addGuards();
@@ -2897,19 +2813,28 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
   }
 
   // ====== 入力ガード：開いている間は全入力を遮断し、指定キーでだけ閉じる ======
-  const CLOSE_CODES = new Set(["Escape","Enter","ArrowLeft","ArrowRight","ArrowUp","KeyZ","Space","KeyS","KeyM"]);
+  const CLOSE_CODES = new Set(["Escape", "Enter", "Space", "KeyH"]);
   function onKeyGuard(e){
-    if (overlay.style.display !== 'block') return;
+    if (overlay.style.display !== "block") return;
     const code = e.code || "";
-    const key  = e.key  || "";
-    const isSpace = (key === " ");
-    if (CLOSE_CODES.has(code) || CLOSE_CODES.has(key) || (isSpace && CLOSE_CODES.has("Space"))) {
-      e.preventDefault(); e.stopPropagation();
+    const key = e.key || "";
+    const isSpace = key === " ";
+    if (
+      e.type === "keydown" &&
+      (
+        CLOSE_CODES.has(code) ||
+        CLOSE_CODES.has(key) ||
+        (isSpace && CLOSE_CODES.has("Space"))
+      )
+    ) {
+      e.preventDefault();
+      e.stopPropagation();
       hide();
       return;
     }
-    // その他のキーもゲームへは通さない
-    e.preventDefault(); e.stopPropagation();
+    // HowTo表示中は、それ以外のkeydown / keyupをすべてゲームへ通さない
+    e.preventDefault();
+    e.stopPropagation();
   }
  function onPointerGuard(e){
   if (overlay.style.display !== 'block') return;
@@ -2939,14 +2864,14 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
     guardsOn = false;
   }
 
-  // 開く（Topbar/PCリンク）
+  // 開く（mobile btnHowto / keyboard H / gamepad Back）
   btns.forEach(b => {
     if (!b) return;
     b.removeAttribute('aria-disabled');
     b.style.cursor = 'pointer';
     b.addEventListener('click', show, {passive:true});
-    b.addEventListener('keydown', e => { if(e.key==='Enter' || e.key===' ') show(); });
   });
+  try { window.showHowTo = show; } catch(_){}
 
   // 閉じる（どこでもクリックで閉じる）
   overlay.addEventListener('click', hide, {passive:true});
@@ -2969,11 +2894,8 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
   let startedOnce = false;
   let tapCount = 0;
 
-  function isMobile(){
-    try{ if (window.matchMedia && matchMedia('(pointer: coarse)').matches) return true; }catch(e){}
-    const ua = (navigator.userAgent||'').toLowerCase();
-    return ('ontouchstart' in window) || /mobi|android|iphone|ipad|ipod|ios/.test(ua);
-  }
+// FORCE DESKTOP: treat all platforms as non-mobile
+function isMobile(){ return false; }
   const mobile = isMobile();
 
   function kickstart(){
@@ -3017,9 +2939,9 @@ if (e.code === "ArrowRight") { _setDown("right"); e.preventDefault(); }
   }
 
   // キャプチャ段階で最初のタップを握りつぶす（タイトル画面の1回目タップ対策）
-  window.addEventListener('pointerdown', onPointerCapture, {capture:true, passive:false});
-  window.addEventListener('touchstart', onTouchStartCapture, {capture:true, passive:false});
-  window.addEventListener('keydown', onKeyDown);
+  // window.addEventListener('pointerdown', onPointerCapture, {capture:true, passive:false});
+  // window.addEventListener('touchstart', onTouchStartCapture, {capture:true, passive:false});
+  // window.addEventListener('keydown', onKeyDown);
 })();
 </script>
 
