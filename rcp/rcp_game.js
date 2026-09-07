@@ -37,6 +37,11 @@
   let waitingForLaunch = true;
   let launchRequested = false;
   let lastLaunchAtMs = 0;
+  const secondChanceState = {
+    available: false,
+    firstLaunchAtMs: null,
+    elapsedMs: 0
+  };
 
   const STUCK_SPEED_EPS = 0.35;
   const STUCK_MOVE_EPS = 3.0;
@@ -176,6 +181,12 @@
     resultInputLockFrames: 102
   };
 
+  function getBallsPerGame() {
+    const configured = TABLE?.game?.ballsPerGame;
+    if (!Number.isFinite(configured)) return GAME_CONFIG.ballsPerGame;
+    return Math.max(1, Math.floor(configured));
+  }
+
   const RECORDS_STORAGE_KEY_PREFIX = "rcp.records.v1";
   const MAX_RECORDS = 5;
 
@@ -300,6 +311,7 @@
     lastTotalScore: 0,
     lastLostBall: 0,
     hintIndex: 0,
+    awaitingFirstLaunchMessage: false,
     centerValueDisplayUnlocked: false
   };
 
@@ -340,6 +352,13 @@
     spinnerValueMaxScore: 10,
     spinnerBumperLevelThresholds: [50, 150],
     spinnerOrbitValueThresholds: [],
+    spinnerBonusValueThresholds: [],
+
+    bonusValueInitialScore: 0,
+    bonusValueAdd: 0,
+    bonusValueMaxScore: Number.POSITIVE_INFINITY,
+    bonusValuePersistsOnBallLoss: false,
+    collectBonusOnBallLoss: true,
 
     centerValueInitialScore: 250,
     centerValueAdd: 250,
@@ -388,6 +407,9 @@
         : [],
       spinnerCenterValueThresholds: Array.isArray(config.spinnerCenterValueThresholds)
         ? config.spinnerCenterValueThresholds.slice()
+        : [],
+      spinnerBonusValueThresholds: Array.isArray(config.spinnerBonusValueThresholds)
+        ? config.spinnerBonusValueThresholds.slice()
         : [],
       centerValueDoublerTriggerTargets: Array.isArray(config.centerValueDoublerTriggerTargets)
         ? config.centerValueDoublerTriggerTargets.slice()
@@ -438,6 +460,9 @@
       spinnerCenterValueThresholds: Array.isArray(tableRules.spinnerCenterValueThresholds)
         ? tableRules.spinnerCenterValueThresholds.slice()
         : base.spinnerCenterValueThresholds,
+      spinnerBonusValueThresholds: Array.isArray(tableRules.spinnerBonusValueThresholds)
+        ? tableRules.spinnerBonusValueThresholds.slice()
+        : base.spinnerBonusValueThresholds,
       centerValueDoublerTriggerTargets: Array.isArray(tableRules.centerValueDoublerTriggerTargets)
         ? tableRules.centerValueDoublerTriggerTargets.slice()
         : base.centerValueDoublerTriggerTargets
@@ -496,6 +521,7 @@
     bumperBonusStep: 0,
 
     spinnerTotalSpins: 0,
+    spinnerBonusValueStep: 0,
     spinnerValueScore: RULE_CONFIG.spinnerValueInitialScore,
 
     centerValueScore: RULE_CONFIG.centerValueInitialScore,
@@ -867,6 +893,77 @@
     }
   }
 
+  function getBonusPowerMultiplier() {
+    const initial = RULE_CONFIG.bonusValueInitialScore;
+    if (!Number.isFinite(initial) || initial <= 0) return 1;
+    return Math.max(1, ruleState.bonusValue / initial);
+  }
+
+  function formatBonusPowerMultiplier() {
+    return getBonusPowerMultiplier().toFixed(1);
+  }
+
+  function getBonusPowerLevelUpScore() {
+    const scoreSteps = TABLE?.bonusPowerLevelUpScores;
+    if (!Array.isArray(scoreSteps)) return 0;
+
+    const multiplier = getBonusPowerMultiplier();
+    const step = scoreSteps.find(item =>
+      Number.isFinite(item?.multiplier) &&
+      Math.abs(item.multiplier - multiplier) < 0.001
+    );
+
+    return Math.max(0, Math.floor(step?.score || 0));
+  }
+
+  function updateBonusValueFromSpinner() {
+    const thresholds = RULE_CONFIG.spinnerBonusValueThresholds;
+    if (!Array.isArray(thresholds) || thresholds.length <= 0) return;
+
+    let changed = false;
+
+    while (
+      ruleState.spinnerBonusValueStep < thresholds.length &&
+      ruleState.spinnerTotalSpins >= thresholds[ruleState.spinnerBonusValueStep]
+    ) {
+      const prev = ruleState.bonusValue;
+
+      ruleState.bonusValue = Math.min(
+        RULE_CONFIG.bonusValueMaxScore,
+        ruleState.bonusValue + RULE_CONFIG.bonusValueAdd
+      );
+
+      ruleState.spinnerBonusValueStep++;
+
+      if (ruleState.bonusValue > prev) {
+        changed = true;
+        addScore(getBonusPowerLevelUpScore(), "bonus power level up");
+      }
+    }
+
+    if (!changed) return;
+    // Keep the collected bonus and its melody intact while spins still score.
+    if (saucerHoldState.active && TABLE?.saucerBonusLevels) return;
+
+    if (TABLE?.saucerBonusLevels) {
+      showDisplayMessage("BONUS POWER UP", 90);
+    } else if (ruleState.bonusValue >= RULE_CONFIG.bonusValueMaxScore) {
+      showDisplayMessage("BONUS VALUE MAX " + ruleState.bonusValue, 90);
+    } else {
+      showDisplayMessage("BONUS VALUE UP " + ruleState.bonusValue, 90);
+    }
+
+    if (TABLE?.id === "table4") {
+      const melodyId = ruleState.bonusValue >= RULE_CONFIG.bonusValueMaxScore
+        ? "bonusPowerMax"
+        : "valueUp";
+
+      window.RCPAudio?.playMelody?.(melodyId, {
+        muted: SFXmute
+      });
+    }
+  }
+
   function increaseSpinnerValue() {
     const prev = ruleState.spinnerValueScore;
 
@@ -898,6 +995,7 @@
     updateBumperLevelFromSpinner();
     updateCenterValueFromSpinner();
     updateOrbitTargetValueFromSpinner();
+    updateBonusValueFromSpinner();
   }
 
   function getCurrentBumperScore() {
@@ -1408,7 +1506,7 @@
   function resetRuleState() {
     const rules = getRuleConfig();
 
-    ruleState.bonusValue = 0;
+    ruleState.bonusValue = rules.bonusValueInitialScore;
     ruleState.bonusMult = 1;
 
     ruleState.orbitBoostActive = false;
@@ -1421,6 +1519,7 @@
     ruleState.bumperBonusStep = 0;
 
     ruleState.spinnerTotalSpins = 0;
+    ruleState.spinnerBonusValueStep = 0;
     ruleState.spinnerValueScore = rules.spinnerValueInitialScore;
 
     ruleState.centerValueScore = rules.centerValueInitialScore;
@@ -1469,6 +1568,7 @@
   let canvas = null;
   let ctx = null;
   let TABLE = null;
+  let tableModeRuntime = null;
 
   function getTableAssets() {
     return TABLE?.assets ?? DEFAULT_ASSETS;
@@ -1511,6 +1611,65 @@
 
   function getRuleConfig() {
     return RULE_CONFIG;
+  }
+
+  function createTableModeRuntime(table) {
+    if (typeof table?.createRuntime !== "function") return null;
+
+    return table.createRuntime({
+      ball,
+      ballRadius: BALL_RADIUS,
+      addScore,
+      showMessage: showDisplayMessage,
+      loseBall: handleBallLost,
+      finishGame: handleTableModeGameOver,
+      formatScore,
+      getScore: () => score,
+      getGameStatus: () => gameState.status,
+      getDisplayMessage: () => displayState.messageTimer > 0 ? displayState.message : "",
+      isBallInPlay: () => ballInPlay,
+      isDropTargetDown: targetId =>
+        dropTargets.some(target => target.id === targetId && target.down),
+      playSfx: (soundId, options = {}) => window.RCPAudio?.play?.(soundId, {
+        ...options,
+        muted: SFXmute
+      }),
+      playMelody: (melodyId, options = {}) => window.RCPAudio?.playMelody?.(melodyId, {
+        ...options,
+        muted: SFXmute
+      }),
+      getBgmTiming: () => window.RCPAudio?.getBgmTiming?.(),
+      getBgmDurationMs: () => window.RCP_BGM_DEFS?.cosmoRaiders?.duration * 1000,
+      stopBgm: () => window.RCPAudio?.stopBgm?.(),
+      resetWavePlayfield: resetBallScopedRules,
+      launchBall,
+      prepareBallLaunch() {
+        ballInPlay = false;
+        waitingForLaunch = true;
+        ball.vx = 0;
+        ball.vy = 0;
+        gameState.status = "ready";
+        resetStuckDetection();
+        resetShotMapState();
+      },
+      setBallInactive() {
+        ballInPlay = false;
+        waitingForLaunch = false;
+        ball.vx = 0;
+        ball.vy = 0;
+        resetStuckDetection();
+        resetShotMapState();
+      },
+      respawnBall() {
+        placeBallAtSpawn();
+        ballInPlay = true;
+        waitingForLaunch = false;
+        gameState.status = "playing";
+        lastLaunchAtMs = performance.now();
+        resetStuckDetection();
+        resetShotMapState();
+      }
+    });
   }
 
   let CANVAS_W = 740;
@@ -1561,6 +1720,7 @@
 
   let leftFlipper = null;
   let rightFlipper = null;
+  let flippers = [];
   let paused = false;
 
   class Flipper {
@@ -1636,7 +1796,7 @@
     return getFlipperSegmentClosestPoint(flipper, b).ratio;
   }
 
-  function getShotMapIndexFromRatio(ratio) {
+  function getShotMapIndexFromRatio(ratio, positionCount = SHOTMAP_POSITION_COUNT) {
     const ratioRange =
       SHOTMAP_RATIO_MAX - SHOTMAP_RATIO_MIN;
 
@@ -1648,8 +1808,8 @@
     return Math.max(
       0,
       Math.min(
-        SHOTMAP_POSITION_COUNT - 1,
-        Math.round(normalized * (SHOTMAP_POSITION_COUNT - 1))
+        positionCount - 1,
+        Math.round(normalized * (positionCount - 1))
       )
     );
   }
@@ -1670,14 +1830,26 @@
     );
   }
 
-  function applyShotMapVelocity(flipper, index) {
-    const angleDeg = flipper.isLeft
-      ? LEFT_SHOT_ANGLE_DEG[index]
-      : RIGHT_SHOT_ANGLE_DEG[index];
+  function getFlipperShotMap(flipper) {
+    const configured = flipper.shotMap;
+    if (configured?.enabled === false) return null;
+
+    const fallbackAngles = flipper.isLeft
+      ? LEFT_SHOT_ANGLE_DEG
+      : RIGHT_SHOT_ANGLE_DEG;
+
+    return {
+      angles: Array.isArray(configured?.angles) ? configured.angles : fallbackAngles,
+      powers: Array.isArray(configured?.powers) ? configured.powers : SHOT_POWER_BY_POSITION
+    };
+  }
+
+  function applyShotMapVelocity(flipper, index, shotMap) {
+    const angleDeg = shotMap.angles[index];
     const angle = degToRad(angleDeg);
     const power =
-      SHOT_POWER_BY_POSITION[index] ??
-      SHOT_POWER_BY_POSITION[0] ??
+      shotMap.powers[index] ??
+      shotMap.powers[0] ??
       25;
 
     ball.vx = Math.cos(angle) * power;
@@ -1696,11 +1868,17 @@
     if (saucerHoldState.active) return false;
     if (!isBallNearFlipper(ball, flipper, SHOTMAP_FIRE_MARGIN)) return false;
 
+    const shotMap = getFlipperShotMap(flipper);
+    if (!shotMap || shotMap.angles.length <= 0) return false;
+
+    const positionCount = Math.min(shotMap.angles.length, shotMap.powers.length);
+    if (positionCount <= 0) return false;
+
     const ratio = getFlipperContactRatio(flipper, ball);
     if (!isRatioInShotMapFireRange(ratio)) return false;
 
-    const index = getShotMapIndexFromRatio(ratio);
-    const { angleDeg, power } = applyShotMapVelocity(flipper, index);
+    const index = getShotMapIndexFromRatio(ratio, positionCount);
+    const { angleDeg, power } = applyShotMapVelocity(flipper, index, shotMap);
 
     if (SHOTMAP_FIRE_DEBUG) {
       console.log("[shotmap mapped fire]", {
@@ -1736,12 +1914,37 @@
       );
       leftFlipper.thickness = defs.left.thickness ?? leftFlipper.thickness;
       rightFlipper.thickness = defs.right.thickness ?? rightFlipper.thickness;
+      leftFlipper.id = defs.left.id ?? "left";
+      rightFlipper.id = defs.right.id ?? "right";
+      leftFlipper.shotMap = defs.left.shotMap ?? null;
+      rightFlipper.shotMap = defs.right.shotMap ?? null;
+
+      flippers = [leftFlipper, rightFlipper];
+
+      if (Array.isArray(defs.additional)) {
+        for (const def of defs.additional) {
+          const isLeft = def.side === "left";
+          const flipper = new Flipper(
+            def.x,
+            def.y,
+            def.length,
+            degToRad(def.minAngleDeg),
+            degToRad(def.maxAngleDeg),
+            isLeft
+          );
+          flipper.id = def.id ?? (isLeft ? "left" : "right");
+          flipper.thickness = def.thickness ?? flipper.thickness;
+          flipper.shotMap = def.shotMap ?? null;
+          flippers.push(flipper);
+        }
+      }
       return;
     }
 
     const flipLen = 90;
     leftFlipper = new Flipper(157, 860, flipLen, (30 * Math.PI) / 180, (-20 * Math.PI) / 180, true);
     rightFlipper = new Flipper(443, 860, flipLen, (150 * Math.PI) / 180, (200 * Math.PI) / 180, false);
+    flippers = [leftFlipper, rightFlipper];
   }
 
   function cubicPoint(p0, p1, p2, p3, t) {
@@ -2334,9 +2537,23 @@
     return null;
   }
 
-  function launchBall() {
-    const isNewBallLaunch = waitingForLaunch;
+  function getSpawnLaunchVelocityX(spawn) {
+    const minVx = spawn.launchVxMin;
+    const maxVx = spawn.launchVxMax;
+    if (!Number.isFinite(minVx) && !Number.isFinite(maxVx)) return -1.0;
 
+    const safeMin = Math.max(0, Number.isFinite(minVx) ? minVx : maxVx);
+    const safeMax = Math.max(safeMin, Number.isFinite(maxVx) ? maxVx : safeMin);
+    const magnitude = safeMin + Math.random() * (safeMax - safeMin);
+
+    if (spawn.launchRandomDirection) {
+      return Math.random() < 0.5 ? -magnitude : magnitude;
+    }
+
+    return spawn.launchDirection === "right" ? magnitude : -magnitude;
+  }
+
+  function placeBallAtSpawn() {
     const spawn = TABLE?.spawn ?? {
       x: CANVAS_W / 2,
       y: 80,
@@ -2350,16 +2567,31 @@
 
     ball.x = spawn.x;
     ball.y = spawn.y;
-    ball.vx = -1.0;
+    ball.vx = getSpawnLaunchVelocityX(spawn);
     ball.vy = -power;
+  }
+
+  function launchBall() {
+    const isNewBallLaunch = waitingForLaunch;
+    placeBallAtSpawn();
 
     ballInPlay = true;
     waitingForLaunch = false;
     launchRequested = false;
     lastLaunchAtMs = performance.now();
+    if (isNewBallLaunch) {
+      secondChanceState.available = TABLE?.secondChance?.enabled === true && !tableModeRuntime;
+      secondChanceState.firstLaunchAtMs = lastLaunchAtMs;
+      secondChanceState.elapsedMs = 0;
+    }
     resetStuckDetection();
 
     displayState.mode = "normal";
+    if (TABLE?.ui?.displayHintsUntilFirstMessage) {
+      displayState.awaitingFirstLaunchMessage = true;
+      displayState.message = "";
+      displayState.messageTimer = 0;
+    }
 
     if (isNewBallLaunch && TABLE?.ui?.centerValueDisplayAfterFirstMessage) {
       displayState.centerValueDisplayUnlocked = false;
@@ -2377,7 +2609,9 @@
 
     if (isNewBallLaunch) {
       const melodyId = getBallLaunchMelodyId(gameState.currentBall);
-      if (melodyId) {
+      if (melodyId === "start" && TABLE?.id === "cosmo_raiders") {
+        window.RCPAudio?.playBgm?.("cosmoRaiders", { muted: SFXmute });
+      } else if (melodyId) {
         window.RCPAudio?.playMelody?.(melodyId, {
           muted: SFXmute
         });
@@ -2630,6 +2864,115 @@
     return groupTargets.every(t => t.down);
   }
 
+  function getDropTargetGroupDownCount(group) {
+    return getDropTargetsByGroup(group).reduce(
+      (count, target) => count + (target.down ? 1 : 0),
+      0
+    );
+  }
+
+  function getSaucerBonusLevels() {
+    return Array.isArray(TABLE?.saucerBonusLevels)
+      ? TABLE.saucerBonusLevels
+      : [];
+  }
+
+  function getSaucerBonusLevel(saucer) {
+    const group = saucer?.requiredDropTargetGroup;
+    if (!group) return null;
+
+    const downCount = getDropTargetGroupDownCount(group);
+    let activeLevel = null;
+
+    for (const level of getSaucerBonusLevels()) {
+      if (downCount >= level.requiredDownCount) {
+        activeLevel = level;
+      }
+    }
+
+    return activeLevel;
+  }
+
+  function isSaucerReady(saucer) {
+    const group = saucer?.requiredDropTargetGroup;
+    if (!group) return true;
+
+    const requiredCount = saucer.requiredDropTargetCount;
+    if (Number.isFinite(requiredCount)) {
+      return getDropTargetGroupDownCount(group) >= requiredCount;
+    }
+
+    return areDropTargetsInGroupAllDown(group);
+  }
+
+  function notifySaucerBonusTargetProgress(group) {
+    const saucer = saucers.find(item => item.requiredDropTargetGroup === group);
+    if (!saucer) return;
+
+    const level = getSaucerBonusLevel(saucer);
+    if (!level) return;
+
+    const downCount = getDropTargetGroupDownCount(group);
+    if (downCount !== level.requiredDownCount) return;
+
+    showDisplayMessage("SAUCER LEVEL " + level.level, 90);
+
+    if (TABLE?.id === "table4") {
+      const melodyIds = {
+        1: "bonusGain",
+        2: "saucerLevel2",
+        3: "comboTarget"
+      };
+      const melodyId = melodyIds[level.level];
+
+      if (melodyId) {
+        window.RCPAudio?.playMelody?.(melodyId, {
+          muted: SFXmute
+        });
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function awardDropTargetCompletionBonuses(target, { suppressMelody = false } = {}) {
+    const bonuses = TABLE?.dropTargetCompletionBonuses;
+    if (!Array.isArray(bonuses)) return;
+
+    let awardedBonus = null;
+
+    for (const bonus of bonuses) {
+      const targetIds = bonus?.targetIds;
+      if (!Array.isArray(targetIds) || !targetIds.includes(target.id)) continue;
+
+      const completed = targetIds.every(targetId =>
+        dropTargets.some(item => item.id === targetId && item.down)
+      );
+      if (!completed) continue;
+
+      if (!awardedBonus || (bonus.score || 0) > (awardedBonus.score || 0)) {
+        awardedBonus = bonus;
+      }
+    }
+
+    if (awardedBonus) {
+      addScore(awardedBonus.score, awardedBonus.id || "drop target completion", {
+        particleX: (target.x1 + target.x2) / 2,
+        particleY: (target.y1 + target.y2) / 2
+      });
+
+      if (
+        !suppressMelody && TABLE?.id === "table4" &&
+        (awardedBonus.id === "upper_left_pair" ||
+          awardedBonus.id === "upper_right_pair")
+      ) {
+        window.RCPAudio?.playMelody?.("bonusGain", {
+          muted: SFXmute
+        });
+      }
+    }
+  }
+
   function scheduleDropTargetGroupReset(group, delayMs) {
     if (!(group in dropTargetGroupResetTimersMs)) {
       dropTargetGroupResetTimersMs[group] = 0;
@@ -2864,7 +3207,9 @@
   }
 
   function resetBallScopedRules() {
-    ruleState.bonusValue = 0;
+    if (!RULE_CONFIG.bonusValuePersistsOnBallLoss) {
+      ruleState.bonusValue = RULE_CONFIG.bonusValueInitialScore;
+    }
     ruleState.bonusMult = 1;
 
     window.RCPAudio?.stopMelody?.();
@@ -2962,12 +3307,70 @@
     shotMapState.skipFlipperCollisionSubsteps = 0;
   }
 
+  function handleTableModeGameOver() {
+    ballInPlay = false;
+    waitingForLaunch = true;
+    ball.vx = 0;
+    ball.vy = 0;
+    resetStuckDetection();
+    nudgeCooldownMs = 0;
+    resetShotMapState();
+
+    displayState.lastBonusTotal = 0;
+    displayState.lastTotalScore = score;
+    submitRecord(score);
+    displayState.mode = "gameOver";
+    gameState.status = "gameOver";
+    gameState.resultInputLock = GAME_CONFIG.resultInputLockFrames;
+
+    window.RCPAudio?.playMelody?.("gameOver", {
+      muted: SFXmute
+    });
+  }
+
+  function trySecondChance() {
+    if (gameState.status === "secondChance") return true;
+    if (!ballInPlay || tableModeRuntime || TABLE?.secondChance?.enabled !== true ||
+        !secondChanceState.available || secondChanceState.firstLaunchAtMs === null ||
+        performance.now() - secondChanceState.firstLaunchAtMs > 5000) return false;
+
+    secondChanceState.available = false;
+    secondChanceState.elapsedMs = 0;
+    ballInPlay = false;
+    waitingForLaunch = false;
+    launchRequested = false;
+    ball.vx = 0;
+    ball.vy = 0;
+    resetStuckDetection();
+    nudgeCooldownMs = 0;
+    resetShotMapState();
+    gameState.status = "secondChance";
+    displayState.mode = "secondChance";
+    displayState.message = "";
+    displayState.messageTimer = 0;
+    window.RCPAudio?.playMelody?.("secondChance", { muted: SFXmute });
+    return true;
+  }
+
+  function updateSecondChance(dtMs) {
+    if (gameState.status !== "secondChance") return;
+    secondChanceState.elapsedMs += dtMs;
+    // Keep the relaunch notice visible throughout the melody and brief hold.
+    if (secondChanceState.elapsedMs >= 1600) launchBall();
+  }
+
   function handleBallLost() {
+    if (trySecondChance()) return;
     const lostBall = gameState.currentBall;
     displayState.lastLostBall = lostBall;
 
-    const bonusTotal = ruleState.bonusValue * ruleState.bonusMult;
-    addScore(bonusTotal, "bonus collect");
+    const bonusTotal = RULE_CONFIG.collectBonusOnBallLoss
+      ? ruleState.bonusValue * ruleState.bonusMult
+      : 0;
+
+    if (bonusTotal > 0) {
+      addScore(bonusTotal, "bonus collect");
+    }
 
     displayState.lastBonusTotal = bonusTotal;
     displayState.lastTotalScore = score;
@@ -2985,7 +3388,7 @@
     nudgeCooldownMs = 0;
     resetShotMapState();
 
-    if (gameState.currentBall < GAME_CONFIG.ballsPerGame) {
+    if (gameState.currentBall < getBallsPerGame()) {
       displayState.mode = "ballLost";
       gameState.currentBall++;
       gameState.status = "ballLost";
@@ -3014,6 +3417,10 @@
     collideSegment(b, seg.x1, seg.y1, seg.x2, seg.y2, seg.r, false, 0, 0, 0);
   }
 
+  function notifyTableModeNonEnemyCollision() {
+    tableModeRuntime?.onNonEnemyCollision?.();
+  }
+
   function collideSegment(b, x1, y1, x2, y2, r, isFlipper, flipperOmega, pivotX, pivotY) {
     const dx = x2 - x1;
     const dy = y2 - y1;
@@ -3030,6 +3437,7 @@
     if (dist2 >= totalR * totalR) return false;
     const dist = Math.sqrt(dist2);
     if (dist === 0) return false;
+    notifyTableModeNonEnemyCollision();
     const nx = (b.x - px) / dist;
     const ny = (b.y - py) / dist;
     const depth = totalR - dist;
@@ -3068,6 +3476,7 @@
     if (distSq >= totalRSq) return;
     const dist = Math.sqrt(distSq);
     if (dist < 1e-6) return;
+    notifyTableModeNonEnemyCollision();
     const nx = dx / dist;
     const ny = dy / dist;
     const depth = totalR - dist;
@@ -3132,12 +3541,14 @@
 
     const px = x1 + t * dx;
     const py = y1 + t * dy;
+    const hitFromBelow = b.y >= py;
     const dist2 = (b.x - px) * (b.x - px) + (b.y - py) * (b.y - py);
     const totalR = BALL_RADIUS + r;
     if (dist2 >= totalR * totalR) return;
 
     const dist = Math.sqrt(dist2);
     if (dist < 1e-6) return;
+    notifyTableModeNonEnemyCollision();
 
     const nx = (b.x - px) / dist;
     const ny = (b.y - py) / dist;
@@ -3152,6 +3563,8 @@
       b.vx -= (1 + restitution) * dot * nx;
       b.vy -= (1 + restitution) * dot * ny;
     }
+
+    if (target.hitFrom === "below" && !hitFromBelow) return;
 
     if (target.hitCooldown > 0) return;
 
@@ -3172,6 +3585,7 @@
     }
     notifyTimedBlockerTargetHit(target.id);
     notifyCenterValueDoublerTargetHit(target.id);
+    tableModeRuntime?.onTargetHit?.(target.id);
     target.flash = 6;
     target.hitCooldown = 6;
   }
@@ -3221,6 +3635,10 @@
   }
 
   function getDropTargetBankMelodyId(group) {
+    if (TABLE?.id === "table4" && group === "bonusReady") {
+      return null;
+    }
+
     if (TABLE?.id === "table777" && group === "combo") {
       return "comboTarget";
     }
@@ -3265,12 +3683,14 @@
 
     const px = x1 + t * dx;
     const py = y1 + t * dy;
+    const hitFromBelow = b.y >= py;
     const dist2 = (b.x - px) * (b.x - px) + (b.y - py) * (b.y - py);
     const totalR = BALL_RADIUS + r;
     if (dist2 >= totalR * totalR) return;
 
     const dist = Math.sqrt(dist2);
     if (dist < 1e-6) return;
+    notifyTableModeNonEnemyCollision();
 
     const nx = (b.x - px) / dist;
     const ny = (b.y - py) / dist;
@@ -3286,15 +3706,13 @@
       b.vy -= (1 + restitution) * dot * ny;
     }
 
+    if (target.hitFrom === "below" && !hitFromBelow) return;
+
     if (target.hitCooldown > 0) return;
 
     const rebound = target.rebound ?? 1.2;
     b.vx += nx * rebound;
     b.vy += ny * rebound;
-
-    window.RCPAudio?.play?.("dropTarget", {
-      muted: SFXmute
-    });
 
     const group = getDropTargetGroup(target);
     const groupScoreConfig = RULE_CONFIG.dropTargetScores[group];
@@ -3307,7 +3725,18 @@
     target.flash = 6;
     target.hitCooldown = 6;
 
-    if (areDropTargetsInGroupAllDown(group)) {
+    const playedSaucerLevelMelody = notifySaucerBonusTargetProgress(group);
+    awardDropTargetCompletionBonuses(target, { suppressMelody: playedSaucerLevelMelody });
+
+    const bankCompleted = areDropTargetsInGroupAllDown(group);
+    const bankHasMelody = bankCompleted && (
+      getDropTargetBankMelodyId(group) || (TABLE?.id === "table1" && group === "orbitBoost")
+    );
+    if (!bankHasMelody && !window.RCPAudio?.isMelodyPlaying?.()) {
+      window.RCPAudio?.play?.("dropTarget", { muted: SFXmute });
+    }
+
+    if (bankCompleted) {
       const bankCompleteScore = groupScoreConfig?.bankComplete ?? 0;
 
       if (group === "topDrop") {
@@ -3331,6 +3760,7 @@
       } else {
         addScore(bankCompleteScore, "drop target bank complete");
         playDropTargetBankMelody(group);
+        tableModeRuntime?.onDropTargetBankComplete?.(group);
 
         if (handleTable777DropTargetBankComplete(group)) {
           const resetDelayMs = getDropTargetGroupResetDelayMs(group);
@@ -3372,6 +3802,7 @@
 
     const dist = Math.sqrt(distSq);
     if (dist < 1e-6) return;
+    notifyTableModeNonEnemyCollision();
 
     const nx = dx / dist;
     const ny = dy / dist;
@@ -4420,7 +4851,7 @@
     trigger.wasInside = inside;
   }
 
-  function handleSaucerEnter(saucer) {
+  function handleSaucerEnter(saucer, isReady) {
     if (isTable777() && saucer.onEnter === "table777Slot") {
       const saucerPoints = ruleState.saucerValue;
       addScore(saucerPoints, "table777 saucer value");
@@ -4429,12 +4860,76 @@
 
       queueTable777SlotReward(slot, 1200);
     }
+
+    if (!isReady) {
+      const unreadyScore = Math.max(0, Math.floor(saucer.unreadyScore || 0));
+      addScore(unreadyScore, "unready saucer");
+
+      if (TABLE?.id === "table4") {
+        window.RCPAudio?.playMelody?.("inactive", {
+          muted: SFXmute
+        });
+      }
+      return;
+    }
+
+    const multiplier = saucer.bonusCollectMultiplier;
+    if (!Number.isFinite(multiplier) || multiplier <= 0) return;
+
+    const levels = getSaucerBonusLevels();
+    const level = getSaucerBonusLevel(saucer);
+    if (levels.length > 0 && !level) return;
+
+    const bonusPoints = level
+      ? Math.round(level.baseScore * getBonusPowerMultiplier() * multiplier)
+      : Math.max(0, ruleState.bonusValue) * multiplier;
+
+    if (bonusPoints > 0) {
+      addScore(bonusPoints, "saucer bonus collect");
+    }
+
+    showDisplayMessage("BONUS " + bonusPoints, 90);
+
+    if (TABLE?.id === "table4" && level) {
+      const lowerMelodyIds = {
+        1: "slotBar",
+        2: "slotBell",
+        3: "slot777"
+      };
+      const upperMelodyIds = {
+        1: "upperSlotBar",
+        2: "upperSlotBell",
+        3: "upperSlot777"
+      };
+      const melodyIds = saucer.id === "upper_saucer"
+        ? upperMelodyIds
+        : lowerMelodyIds;
+      const melodyId = melodyIds[level.level];
+
+      if (melodyId) {
+        window.RCPAudio?.playMelody?.(melodyId, {
+          muted: SFXmute
+        });
+      }
+    } else {
+      window.RCPAudio?.play?.("featureConsumed", {
+        muted: SFXmute
+      });
+    }
+
+    if (saucer.requiredDropTargetGroup) {
+      resetDropTargetGroup(saucer.requiredDropTargetGroup);
+    }
   }
 
   function captureSaucer(b, saucer) {
+    const isReady = isSaucerReady(saucer);
+
     saucerHoldState.active = true;
     saucerHoldState.saucer = saucer;
-    saucerHoldState.timerMs = saucer.holdMs ?? 1200;
+    saucerHoldState.timerMs = isReady
+      ? (saucer.holdMs ?? 1200)
+      : (saucer.unreadyHoldMs ?? 0);
 
     b.x = saucer.x;
     b.y = saucer.y;
@@ -4443,7 +4938,7 @@
 
     saucer.flash = 10;
 
-    handleSaucerEnter(saucer);
+    handleSaucerEnter(saucer, isReady);
   }
 
   function checkSaucerEnter(b, saucer) {
@@ -4481,7 +4976,10 @@
 
     ball.x = saucer.x;
     ball.y = saucer.y;
-    ball.vx = saucer.releaseVx ?? 0;
+    const releaseVx = saucer.releaseVx ?? 0;
+    ball.vx = saucer.releaseRandomDirection && releaseVx !== 0
+      ? (Math.random() < 0.5 ? -1 : 1) * Math.abs(releaseVx)
+      : releaseVx;
     ball.vy = saucer.releaseVy ?? 0;
 
     saucer.wasInside = true;
@@ -4707,6 +5205,7 @@
 
     const dist = Math.sqrt(dist2);
     if (dist === 0) return;
+    notifyTableModeNonEnemyCollision();
 
     const pushNx = (b.x - px) / dist;
     const pushNy = (b.y - py) / dist;
@@ -4745,6 +5244,9 @@
   }
 
   function pinballFixedUpdate(dt) {
+    updateSecondChance(dt * 1000);
+    tableModeRuntime?.update?.(dt * 1000);
+
     if (isTable777()) {
       const dtMs = dt * 1000;
       updateTable777SlotVisual(dtMs);
@@ -4755,19 +5257,17 @@
     const h = tick / SUBSTEPS;
 
     if (!ballInPlay) {
-      leftFlipper.update(tick);
-      rightFlipper.update(tick);
+      for (const flipper of flippers) flipper.update(tick);
       return;
     }
 
-    if (saucerHoldState.active) {
-      leftFlipper.update(tick);
-      rightFlipper.update(tick);
+    const wasHoldingSaucer = saucerHoldState.active;
+    if (wasHoldingSaucer) {
+      for (const flipper of flippers) flipper.update(tick);
       updateSaucerHold(dt * 1000);
-      return;
     }
 
-    for (let s = 0; s < SUBSTEPS; s++) {
+    for (let s = 0; !wasHoldingSaucer && !saucerHoldState.active && s < SUBSTEPS; s++) {
       ball.vy += GRAVITY * h;
       let speed = Math.hypot(ball.vx, ball.vy);
       if (speed > MAX_SPEED) {
@@ -4776,8 +5276,7 @@
       }
       ball.x += ball.vx * h;
       ball.y += ball.vy * h;
-      leftFlipper.update(h);
-      rightFlipper.update(h);
+      for (const flipper of flippers) flipper.update(h);
       for (let w = 0; w < walls.length; w++) {
         const wall = walls[w];
         if (!wall.bounds || isBallNearBounds(ball, wall.bounds)) {
@@ -4841,6 +5340,7 @@
       for (let si = 0; si < saucers.length; si++) {
         checkSaucerEnter(ball, saucers[si]);
       }
+      if (saucerHoldState.active) break;
       checkLoopRouteTrigger(ball);
       checkLoopCenterPass(ball);
       checkOrbitSoundTrigger(ball);
@@ -4932,35 +5432,25 @@
           collidePost(ball, post);
         }
       }
+      tableModeRuntime?.fixedUpdate?.(h);
       if (shotMapState.skipFlipperCollisionSubsteps > 0) {
         shotMapState.skipFlipperCollisionSubsteps--;
       } else {
-        const lP2 = leftFlipper.getP2();
-        collideSegment(
-          ball,
-          leftFlipper.x,
-          leftFlipper.y,
-          lP2.x,
-          lP2.y,
-          leftFlipper.thickness,
-          true,
-          leftFlipper.currentOmega,
-          leftFlipper.x,
-          leftFlipper.y
-        );
-        const rP2 = rightFlipper.getP2();
-        collideSegment(
-          ball,
-          rightFlipper.x,
-          rightFlipper.y,
-          rP2.x,
-          rP2.y,
-          rightFlipper.thickness,
-          true,
-          rightFlipper.currentOmega,
-          rightFlipper.x,
-          rightFlipper.y
-        );
+        for (const flipper of flippers) {
+          const p2 = flipper.getP2();
+          collideSegment(
+            ball,
+            flipper.x,
+            flipper.y,
+            p2.x,
+            p2.y,
+            flipper.thickness,
+            true,
+            flipper.currentOmega,
+            flipper.x,
+            flipper.y
+          );
+        }
       }
       checkKickbackSensors(ball);
       checkBallSaveSensors(ball);
@@ -5035,7 +5525,8 @@
       updateSpinnerPulse(spinners[spi]);
     }
     if (ball.y > CANVAS_H + 50) {
-      handleBallLost();
+      const handledByTableMode = tableModeRuntime?.handleOutHole?.() === true;
+      if (!handledByTableMode) handleBallLost();
     }
   }
 
@@ -5072,17 +5563,21 @@
     const leftUp = !!(input && input.leftFlipper);
     const rightUp = !!(input && input.rightFlipper);
 
-    if (leftUp && !leftFlipper.isUp) {
-      tryFireMappedFlipperShot(leftFlipper);
-      window.RCPAudio?.play?.("flipper", { muted: SFXmute });
-    }
-    if (rightUp && !rightFlipper.isUp) {
-      tryFireMappedFlipperShot(rightFlipper);
-      window.RCPAudio?.play?.("flipper", { muted: SFXmute });
+    let playLeftSfx = false;
+    let playRightSfx = false;
+
+    for (const flipper of flippers) {
+      const isUp = flipper.isLeft ? leftUp : rightUp;
+      if (isUp && !flipper.isUp) {
+        tryFireMappedFlipperShot(flipper);
+        if (flipper.isLeft) playLeftSfx = true;
+        else playRightSfx = true;
+      }
+      flipper.isUp = isUp;
     }
 
-    leftFlipper.isUp = leftUp;
-    rightFlipper.isUp = rightUp;
+    if (playLeftSfx) window.RCPAudio?.play?.("flipper", { muted: SFXmute });
+    if (playRightSfx) window.RCPAudio?.play?.("flipper", { muted: SFXmute });
   }
 
   function tryNudge() {
@@ -5440,6 +5935,25 @@
     drawCtx.restore();
   }
 
+  function drawSaucerLight(drawCtx, saucer) {
+    const level = getSaucerBonusLevel(saucer);
+    if (!level) return;
+
+    drawCtx.save();
+    drawCtx.globalAlpha = saucer.lightAlpha ?? 1;
+    drawCtx.beginPath();
+    drawCtx.arc(
+      saucer.x,
+      saucer.y,
+      saucer.lightR ?? Math.max(4, (saucer.r ?? 30) - 8),
+      0,
+      Math.PI * 2
+    );
+    drawCtx.fillStyle = level.color ?? getTableColor("scoreFlash", "scoreFlash");
+    drawCtx.fill();
+    drawCtx.restore();
+  }
+
   function drawPost(drawCtx, post) {
     const visualR = post.visualR ?? post.r;
     if (visualR <= 0) return;
@@ -5452,6 +5966,7 @@
 
   function drawTarget(drawCtx, target) {
     const flashing = target.flash > 0;
+    const runtimeLit = Boolean(tableModeRuntime?.isTargetLit?.(target.id));
 
     if (target.wall) {
       drawCtx.beginPath();
@@ -5477,6 +5992,8 @@
     drawCtx.lineWidth = 5;
     drawCtx.strokeStyle = flashing
       ? getTableColor("scoreFlash", "scoreFlash")
+      : runtimeLit
+        ? getTableColor("targetLit", "cyan")
       : target.type === "centerValue" && ruleState.centerValueDoublerActive
         ? getTableColor("flipper", "rcpRed")
         : ruleState.orbitBoostActive
@@ -5715,6 +6232,11 @@
   }
 
   function getLaunchPromptText() {
+    const customText = tableModeRuntime?.getLaunchPromptText?.();
+    if (typeof customText === "string" && customText.length > 0) {
+      return customText;
+    }
+
     if (gameState.status === "ready") {
       return "START GAME";
     }
@@ -5743,7 +6265,12 @@
     drawCtx.textBaseline = "middle";
     drawCtx.font = "700 24px system-ui, sans-serif";
     drawCtx.fillStyle = "#fff";
-    drawPromptText(drawCtx, "LAUNCH TO RESTART GAME", CANVAS_W / 2, 635 + 152.5 + 40);
+    drawPromptText(
+      drawCtx,
+      "LAUNCH TO RESTART GAME",
+      CANVAS_W / 2,
+      getPlayfieldUiLayout().secondaryPromptY
+    );
     drawCtx.restore();
   }
 
@@ -5753,18 +6280,25 @@
     drawCtx.textBaseline = "middle";
     drawCtx.font = "700 24px system-ui, sans-serif";
     drawCtx.fillStyle = "#fff";
-    drawPromptText(drawCtx, "↓ TABLE GUIDE   ↑ RECORDS", CANVAS_W / 2, 635 + 152.5 + 40);
+    drawPromptText(
+      drawCtx,
+      "↓ TABLE GUIDE   ↑ RECORDS",
+      CANVAS_W / 2,
+      getPlayfieldUiLayout().secondaryPromptY
+    );
     drawCtx.restore();
   }
 
   function drawBallStatus(drawCtx) {
+    if (TABLE?.ui?.showBallStatus === false) return;
+
     drawCtx.save();
     drawCtx.textAlign = "right";
     drawCtx.textBaseline = "top";
     drawCtx.font = "700 28px system-ui, sans-serif";
     drawCtx.fillStyle = "#bbb";
     drawCtx.fillText(
-      "BALL " + gameState.currentBall + "/" + GAME_CONFIG.ballsPerGame,
+      "BALL " + gameState.currentBall + "/" + getBallsPerGame(),
       CANVAS_W - 20,
       20
     );
@@ -5773,8 +6307,8 @@
 
   function shouldShowBonusHint() {
     return displayState.mode === "normal"
-      && ruleState.bonusValue === 0
-      && ruleState.bonusMult === 1;
+      && (displayState.awaitingFirstLaunchMessage
+        || (ruleState.bonusValue === 0 && ruleState.bonusMult === 1));
   }
 
   function getCenterValueDisplayText() {
@@ -5798,6 +6332,10 @@
       return hints[displayState.hintIndex] ?? hints[0] ?? "";
     }
 
+    if (TABLE?.saucerBonusLevels) {
+      return "BONUS POWER x" + formatBonusPowerMultiplier();
+    }
+
     return "BONUS " + ruleState.bonusValue + " x" + ruleState.bonusMult;
   }
 
@@ -5818,6 +6356,12 @@
   }
 
   function getDisplayLines() {
+    if (displayState.mode === "secondChance") {
+      return {
+        line1: "Relaunching...",
+        line2: "SCORE " + formatScore(score)
+      };
+    }
     if (displayState.mode === "ballLost") {
       if (TABLE?.ui?.ballLostDisplay === "ballLostScore") {
         return {
@@ -5868,6 +6412,7 @@
   }
 
   function showDisplayMessage(text, frames = 90) {
+    displayState.awaitingFirstLaunchMessage = false;
     if (TABLE?.ui?.centerValueDisplayAfterFirstMessage) {
       displayState.centerValueDisplayUnlocked = true;
     }
@@ -5885,9 +6430,31 @@
     }
   }
 
-  function drawDisplayLabelValue(drawCtx, label, value, y) {
-    const x = 127.5;
-    const w = 485;
+  function getPlayfieldUiLayout() {
+    const configured = TABLE?.ui?.playfieldLayout || {};
+    const defaultDisplay = {
+      x: 141.5,
+      y: 635,
+      w: 457,
+      h: 152.5
+    };
+    const display = {
+      ...defaultDisplay,
+      ...(configured.display || {})
+    };
+
+    return {
+      display,
+      launchPromptY: configured.launchPromptY ?? CANVAS_H * 0.455,
+      pausedPromptY: configured.pausedPromptY ?? CANVAS_H / 2.2,
+      relaunchPromptY: configured.relaunchPromptY ?? CANVAS_H * 0.35,
+      secondaryPromptY: configured.secondaryPromptY ?? display.y + display.h + 40
+    };
+  }
+
+  function drawDisplayLabelValue(drawCtx, label, value, y, displayLayout) {
+    const x = displayLayout.x - 14;
+    const w = displayLayout.w + 28;
     const padX = 108;
 
     drawCtx.textBaseline = "middle";
@@ -5903,11 +6470,9 @@
 
   function drawPlayfieldDisplay(drawCtx) {
     const lines = getDisplayLines();
-
-    const x = 141.5;
-    const y = 635;
-    const w = 457;
-    const h = 152.5;
+    const layout = getPlayfieldUiLayout().display;
+    const { x, y, w, h } = layout;
+    const customLines = tableModeRuntime?.getDisplayLines?.() ?? null;
 
     drawCtx.save();
 
@@ -5928,7 +6493,18 @@
     const resultColor = displayState.mode === "gameOver" ? "#fff" : "#bbb";
     drawCtx.fillStyle = resultColor;
 
-    if (displayState.mode === "normal") {
+    if (customLines && displayState.mode === "normal") {
+      drawCtx.textAlign = "center";
+      drawCtx.font = "500 28px system-ui, sans-serif";
+      drawCtx.fillText(customLines.line1, x + w / 2, y + 52);
+
+      if (customLines.line2Label != null && customLines.line2Value != null) {
+        drawDisplayLabelValue(drawCtx, customLines.line2Label, customLines.line2Value, y + 102, layout);
+      } else {
+        drawCtx.font = "700 36px system-ui, sans-serif";
+        drawCtx.fillText(customLines.line2, x + w / 2, y + 102);
+      }
+    } else if (displayState.mode === "normal") {
       const line1Overlay = getDisplayLine1Overlay();
       const line1Text = line1Overlay ?? getDisplayBonusText();
 
@@ -5936,7 +6512,14 @@
       drawCtx.font = "500 28px system-ui, sans-serif";
       drawCtx.fillText(line1Text, x + w / 2, y + 52);
 
-      drawDisplayLabelValue(drawCtx, "SCORE", formatScore(score), y + 102);
+      drawDisplayLabelValue(drawCtx, "SCORE", formatScore(score), y + 102, layout);
+    } else if (displayState.mode === "secondChance") {
+      drawCtx.fillStyle = resultColor;
+      drawCtx.textAlign = "center";
+      drawCtx.font = "500 28px system-ui, sans-serif";
+      drawCtx.fillText(lines.line1, x + w / 2, y + 52);
+
+      drawDisplayLabelValue(drawCtx, "SCORE", formatScore(score), y + 102, layout);
     } else {
       drawCtx.fillStyle = resultColor;
       drawCtx.textAlign = "center";
@@ -6044,7 +6627,7 @@
     drawCtx.fillText("2026", 58, 949);
 
     drawCtx.textAlign = "right";
-    drawCtx.fillText("version 1.0.0", 680, 949);
+    drawCtx.fillText("version 1.1.0", 680, 949);
 
     const selectedItem = TABLE_SELECT_ITEMS[titleState.selectedTableIndex] ?? TABLE_SELECT_ITEMS[0];
     drawCtx.textAlign = "center";
@@ -6524,6 +7107,12 @@
     }
   }
 
+  function drawDynamicSaucerLightsLayer(drawCtx) {
+    for (let si = 0; si < saucers.length; si++) {
+      drawSaucerLight(drawCtx, saucers[si]);
+    }
+  }
+
   function drawTimedBlocker(drawCtx, blocker) {
     if (blocker.open) return;
 
@@ -6587,8 +7176,7 @@
       drawCtx.fillStyle = COLORS.white;
       drawCtx.fill();
     }
-    strokeFlipper(leftFlipper);
-    strokeFlipper(rightFlipper);
+    for (const flipper of flippers) strokeFlipper(flipper);
     for (let bsi = 0; bsi < ballSaves.length; bsi++) {
       drawBallSave(drawCtx, ballSaves[bsi]);
     }
@@ -6609,6 +7197,7 @@
     drawDynamicWallBumps(drawCtx);
     drawDynamicOrbitIndicators(drawCtx);
     drawDynamicSpinnersLayer(drawCtx);
+    drawDynamicSaucerLightsLayer(drawCtx);
     drawDynamicTopLanesTargetsLayer(drawCtx);
     drawDynamicSlingshotsKickbacksLayer(drawCtx);
     drawDynamicFlippersBallSavesLayer(drawCtx);
@@ -6674,6 +7263,7 @@
     }
     drawDynamicOrbitIndicators(drawCtx);
     drawDynamicSpinnersLayer(drawCtx);
+    drawDynamicSaucerLightsLayer(drawCtx);
     if (useStaticCache) {
       blitStaticPlayfieldCacheSlot(drawCtx, STATIC_PLAYFIELD_CACHE_SLOT.topLaneDividers);
     } else {
@@ -6692,13 +7282,20 @@
       drawStaticPostsLayer(drawCtx);
     }
     drawDynamicFlippersBallSavesLayer(drawCtx);
+    tableModeRuntime?.drawBeforeBall?.(drawCtx);
     drawBall(drawCtx);
+    tableModeRuntime?.drawBehindPlayfield?.(drawCtx);
+    tableModeRuntime?.draw?.(drawCtx);
     drawDynamicBumpersLayer(drawCtx);
     drawHighScoreParticles(drawCtx);
     drawDebugOverlay(drawCtx);
   }
 
   function reset() {
+    window.RCPAudio?.stopBgm?.();
+    secondChanceState.available = false;
+    secondChanceState.firstLaunchAtMs = null;
+    secondChanceState.elapsedMs = 0;
     score = 0;
     for (let bi = 0; bi < bumpers.length; bi++) bumpers[bi].flash = 0;
     for (let si = 0; si < slingshots.length; si++) slingshots[si].flash = 0;
@@ -6748,6 +7345,7 @@
     displayState.lastTotalScore = 0;
     displayState.lastLostBall = 0;
     displayState.hintIndex = 0;
+    displayState.awaitingFirstLaunchMessage = false;
     displayState.centerValueDisplayUnlocked = false;
 
     gameState.status = "ready";
@@ -6774,6 +7372,7 @@
     overlayState.returnTo = "title";
     resetShotMapState();
     highScoreParticles.length = 0;
+    tableModeRuntime?.reset?.();
   }
 
   function applyTable(table) {
@@ -6785,6 +7384,7 @@
     syncCanvasResolution();
     loadTableAssets();
     initFlippers();
+    tableModeRuntime = createTableModeRuntime(table);
     loadRecords();
     reset();
 
@@ -6954,6 +7554,7 @@
         if (input.launchPressed || input.pausePressed) {
           overlayState.mode = "none";
           paused = false;
+          window.RCPAudio?.setBgmPaused?.(false);
           input.launchPressed = false;
           input.pausePressed = false;
         }
@@ -6966,6 +7567,7 @@
       if (input.pausePressed) {
         overlayState.mode = "pauseHub";
         paused = true;
+        window.RCPAudio?.setBgmPaused?.(true);
         input.pausePressed = false;
       }
     }
@@ -6997,7 +7599,9 @@
           reset();
         }
       } else if (waitingForLaunch) {
-        launchBall();
+        const handledByTableMode =
+          tableModeRuntime?.handleLaunchRequest?.() === true;
+        if (!handledByTableMode) launchBall();
       } else if (stuckRelaunchAvailable) {
         launchBall();
       }
@@ -7019,6 +7623,8 @@
   }
 
   function draw(drawCtx) {
+    const playfieldUiLayout = getPlayfieldUiLayout();
+
     drawCtx.fillStyle = CANVAS_BACKGROUND_COLOR;
     drawCtx.fillRect(0, 0, CANVAS_W, CANVAS_H);
     drawPlayfieldMask(drawCtx);
@@ -7034,7 +7640,7 @@
         drawCtx.textBaseline = "middle";
         drawCtx.font = "900 42px system-ui, sans-serif";
         drawCtx.fillStyle = "#fff";
-        drawPromptText(drawCtx, "PAUSED", CANVAS_W / 2, CANVAS_H / 2.2);
+        drawPromptText(drawCtx, "PAUSED", CANVAS_W / 2, playfieldUiLayout.pausedPromptY);
         drawCtx.restore();
         drawPauseGuidePrompt(drawCtx);
       } else if (stuckRelaunchAvailable) {
@@ -7043,15 +7649,28 @@
         drawCtx.textBaseline = "middle";
         drawCtx.font = "700 24px system-ui, sans-serif";
         drawCtx.fillStyle = "#fff";
-        drawPromptText(drawCtx, "PRESS LAUNCH TO RELAUNCH", CANVAS_W / 2, CANVAS_H * 0.35);
+        drawPromptText(
+          drawCtx,
+          "PRESS LAUNCH TO RELAUNCH",
+          CANVAS_W / 2,
+          playfieldUiLayout.relaunchPromptY
+        );
         drawCtx.restore();
-      } else if (waitingForLaunch) {
+      } else if (
+        waitingForLaunch &&
+        tableModeRuntime?.shouldShowLaunchPrompt?.() !== false
+      ) {
         drawCtx.save();
         drawCtx.textAlign = "center";
         drawCtx.textBaseline = "middle";
         drawCtx.font = "900 32px system-ui, sans-serif";
         drawCtx.fillStyle = "#fff";
-        drawPromptText(drawCtx, getLaunchPromptText(), CANVAS_W / 2, CANVAS_H * 0.455);
+        drawPromptText(
+          drawCtx,
+          getLaunchPromptText(),
+          CANVAS_W / 2,
+          playfieldUiLayout.launchPromptY
+        );
         drawCtx.restore();
 
         if (gameState.status === "gameOver" && gameState.resultInputLock <= 0) {
@@ -7549,7 +8168,10 @@
     update,
     draw,
     get paused() { return paused; },
-    set paused(v) { paused = !!v; }
+    set paused(v) {
+      paused = !!v;
+      window.RCPAudio?.setBgmPaused?.(paused);
+    }
   };
 
   function autoStart() {

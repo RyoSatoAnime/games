@@ -7,6 +7,30 @@
   Object.assign(
     window.RCP_MELODY_DEFS,
     {
+      // 120 BPM; the rest preserves the original phrase's t=0.5 second note.
+      // Use the same wave32 instrument as bankCompleted.
+      "secondChance": {
+        "id": "secondChance",
+        "bpm": 140,
+        "instrument": {
+          "wave": "wave32",
+          "volume": 0.20,
+          "attack": 0.002,
+          "gate": 0.82,
+          "release": 0.025,
+          "wave32": {
+            "nibbles": "0147DEEECB975321000122468ADECCA8"
+          }
+        },
+        "notes": [
+          { "note": 31, "beats": 0.25 },
+          { "note": 36, "beats": 0.25 },
+          { "note": 41, "beats": 0.25 },
+          { "note": 36, "beats": 0.25 },
+          { "note": 41, "beats": 0.25 },
+          { "note": 43, "beats": 0.5 }
+        ]
+      },
       "tableConfirm": {
         "id": "tableConfirm",
         "bpm": 400,
@@ -655,6 +679,121 @@
           }
         ]
       },
+      "saucerLevel2": {
+        "id": "saucerLevel2",
+        "bpm": 180,
+        "instrument": {
+          "wave": "wave32",
+          "volume": 0.20,
+          "attack": 0.002,
+          "gate": 0.82,
+          "release": 0.025,
+          "filter": {
+            "type": "none",
+            "freq": 1200,
+            "q": 1
+          },
+          "wave32": {
+            "nibbles": "0147DEEECB975321000122468ADECCA8"
+          }
+        },
+        "notes": [
+          {
+            "note": 55,
+            "beats": 0.25
+          },
+          {
+            "note": 58,
+            "beats": 0.25
+          },
+          {
+            "note": 60,
+            "beats": 0.25
+          },
+          {
+            "note": 65,
+            "beats": 0.25
+          },
+          {
+            "note": 58,
+            "beats": 0.25
+          },
+          {
+            "note": 60,
+            "beats": 0.25
+          }
+        ]
+      },
+      "bonusPowerMax": {
+        "id": "bonusPowerMax",
+        "bpm": 140,
+        "instrument": {
+          "wave": "wave32",
+          "volume": 0.20,
+          "attack": 0.002,
+          "gate": 0.82,
+          "release": 0.025,
+          "filter": {
+            "type": "none",
+            "freq": 1200,
+            "q": 1
+          },
+          "wave32": {
+            "nibbles": "0147DEEECB975321000122468ADECCA8"
+          }
+        },
+        "notes": [
+          {
+            "note": 55,
+            "beats": 0.25
+          },
+          {
+            "note": 60,
+            "beats": 0.25
+          },
+          {
+            "note": 67,
+            "beats": 0.25
+          },
+          {
+            "note": 72,
+            "beats": 0.25
+          }
+        ]
+      },
+      "inactive": {
+        "id": "inactive",
+        "bpm": 180,
+        "instrument": {
+          "wave": "wave32",
+          "volume": 0.20,
+          "attack": 0.002,
+          "gate": 0.82,
+          "release": 0.025,
+          "filter": {
+            "type": "none",
+            "freq": 1200,
+            "q": 1
+          },
+          "wave32": {
+            "nibbles": "0147DEEECB975321000122468ADECCA8"
+          }
+        },
+        "notes": [
+          {
+            "note": 41,
+            "beats": 0.25
+          },
+          {
+            "note": 36,
+            "beats": 0.25
+          },
+          {
+            "note": 36,
+            "beats": 0.25
+          }
+        ]
+      },
       "bonusGain": {
         "id": "bonusGain",
         "bpm": 180,
@@ -1063,4 +1202,28 @@
       }
     }
   );
+
+  const upperSaucerMelodyBases = {
+    upperSlotBar: "slotBar",
+    upperSlotBell: "slotBell",
+    upperSlot777: "slot777"
+  };
+
+  for (const [id, baseId] of Object.entries(upperSaucerMelodyBases)) {
+    const base = window.RCP_MELODY_DEFS[baseId];
+    if (!base) continue;
+
+    window.RCP_MELODY_DEFS[id] = {
+      ...base,
+      id,
+      instrument: {
+        ...base.instrument,
+        layers: [
+          { detune: -10, volume: 0.05 },
+          { detune: 10, volume: 0.05 }
+        ]
+      },
+      notes: base.notes.map(note => ({ ...note }))
+    };
+  }
 })();

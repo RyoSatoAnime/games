@@ -3,79 +3,75 @@
 
   window.RCP_TABLES = window.RCP_TABLES || {};
 
-  window.RCP_TABLES.table2 = {
-    id: "table2",
-    label: "Table 2",
+  window.RCP_TABLES.table4 = {
+    id: "table4",
+    label: "Table 4",
     secondChance: { enabled: true },
 
     assets: {
       playfieldLogo: true,
       playfieldMask: {
-        src: "./svg/maskT2.svg",
+        src: "./svg/maskT4.svg",
         opacity: 1
       },
       howToOverlay: {
-        src: "./svg/howToOverlayT2.svg",
+        src: "./svg/howToOverlayT4.svg",
         opacity: 1
       }
     },
 
     ui: {
+      ballLostDisplay: "ballLostScore",
+      displayHintsUntilFirstMessage: true,
+      gameOverDisplay: "finalScoreOnly",
       displayHints: [
-        "AIM TOP DROP",
-        "BUMPERS BUILD BONUS",
-        "TOP LANES BOOST MULT",
-        "R DROP FOR BALL SAVE",
-        "L DROP FOR KICKBACKS"
+        "UPPER TARGETS BUILD BONUS",
+        "SAUCERS COLLECT BONUS",
+        "HIGHER LEVELS PAY MORE",
+        "UPPER SAUCER COLLECTS x2",
+        "SPINNERS POWER UP SAUCERS"
       ]
     },
 
+    // Saucer collection is the main scoring objective.
     rules: {
-      topDropBankBonusInitialScore: 500,
-      topDropBankBonusAdd: 500,
-      topDropBankBonusMaxScore: 2000,
-      topDropResetDelayMs: 2000,
       dropTargetGroupResetDelayMs: 2000,
-      kickbackDurationMs: 6000,
-      ballSaveDurationMs: 8000,
+      dropTargetGroupResetDelays: {
+        bonusReady: 0
+      },
 
       dropTargetScores: {
-        orbitValue: {
+        bonusReady: {
           hit: 25,
-          bankComplete: 50
-        },
-        orbitBoost: {
-          hit: 25,
-          bankComplete: 75
+          bankComplete: 0
         },
         leftDrop: {
           hit: 25,
-          bankComplete: 50
+          bankComplete: 100
         },
         rightDrop: {
           hit: 25,
-          bankComplete: 50
-        },
-        topDrop: {
-          hit: 25,
-          bankComplete: 250
+          bankComplete: 100
         }
       },
 
-      bumperScores: [15, 30, 50],
-      bumperBonusValueAdd: 1000,
-      bumperBonusValueThresholds: [10, 25, 45, 70, 100],
+      bumperScores: [20],
+      bumperLevelThresholds: [],
+      bumperBonusValueAdd: 0,
+      bumperBonusValueThresholds: [],
 
       spinnerScorePerSpin: 10,
-      spinnerBumperLevelThresholds: [25, 100],
+      spinnerBumperLevelThresholds: [],
+      spinnerBonusValueThresholds: [20, 45, 75, 110, 150],
 
-      topLaneScore: 10,
-      topLaneCompleteScore: 200,
-      bonusMultMax: 5,
+      bonusValueInitialScore: 500,
+      bonusValueAdd: 100,
+      bonusValueMaxScore: 1000,
+      bonusValuePersistsOnBallLoss: true,
+      collectBonusOnBallLoss: false,
 
       wallBumpScore: 5,
-
-      loopBonusScore: 100
+      loopBonusScore: 0
     },
 
     canvas: {
@@ -86,26 +82,42 @@
     },
 
     walls: [
+      // Canvas boundary and shared lower geometry.
       { x1: -10.5, y1: -10.5, x2: 750.5, y2: -10.5, r: 14 },
       { x1: -10.5, y1: -10.5, x2: -10.5, y2: 1280.5, r: 14 },
       { x1: 750.5, y1: -10.5, x2: 750.5, y2: 1280.5, r: 14 },
       { x1: 216.2, y1: 1280, x2: 0, y2: 1155, r: 3 },
       { x1: 740, y1: 1155, x2: 523.9, y2: 1280, r: 3 },
-      // wall_spinner
-      { x1: 740.1, y1: 341.5, x2: 675.5, y2: 616.5, r: 2 },
-      { x1: 675.5, y1: 616.5, x2: 740, y2: 788, r: 2 },
-      // wall_target_left
-      { x1: 88.5, y1: 604.5, x2: 0.5, y2: 783.5, r: 2 },
-      // wall_target_top diagonal
-      { x1: 568.6, y1: 170.1, x2: 491.7, y2: -0.2, r: 2 },
-      // out lane divider
+
+      // Outlane dividers.
       { x1: 65, y1: 1095, x2: 65, y2: 912, r: 3 },
       { x1: 675, y1: 912, x2: 675, y2: 1095, r: 3 },
-      // out lane divider rim
       { x1: 63, y1: 908, x2: 65, y2: 912, r: 3 },
       { x1: 675, y1: 912, x2: 677, y2: 908, r: 3 },
-      // spinner_divider
-      { x1: 599.5, y1: 545.5, x2: 587.4, y2: 586.2, r: 3 }
+
+      // Upper saucer wall: two sloped sides to avoid a flat resting surface.
+      { x1: 370, y1: 70, x2: 308.6, y2: 117.2, r: 2 },
+      { x1: 370, y1: 70, x2: 431.4, y2: 117.2, r: 2 },
+
+      // Lower saucer wall: two sloped sides to avoid a flat resting surface.
+      { x1: 370, y1: 489, x2: 328.4, y2: 521, r: 2 },
+      { x1: 370, y1: 489, x2: 411.6, y2: 521, r: 2 },
+
+      // Symmetrical upper walls.
+      { x1: 308.6, y1: 117.2, x2: 128, y2: 3, r: 2 },
+      { x1: 128, y1: 3, x2: 2, y2: 109, r: 2 },
+      { x1: 2, y1: 109, x2: 78, y2: 295, r: 2 },
+      { x1: 431.4, y1: 117.2, x2: 612, y2: 3, r: 2 },
+      { x1: 612, y1: 3, x2: 738, y2: 109, r: 2 },
+      { x1: 738, y1: 109, x2: 662, y2: 295, r: 2 },
+
+      // Side drop-target lane walls.
+      { x1: 0, y1: 775, x2: 54.2, y2: 575.3, r: 2 },
+      { x1: 740, y1: 775, x2: 685.8, y2: 575.3, r: 2 },
+
+      // Spinner dividers.
+      { x1: 145.5, y1: 484.4, x2: 155.1, y2: 510.7, r: 2 },
+      { x1: 594.5, y1: 484.4, x2: 584.9, y2: 510.7, r: 2 }
     ],
 
     wallBumps: [
@@ -124,18 +136,6 @@
         ]
       }
     ],
-
-    orbitValueIndicators: [],
-
-    topDropValueIndicator: {
-      shape: "triangle3",
-      x: 565,
-      y: 6,
-      angleDeg: 66,
-      scale: 1,
-      color: "#3fe",
-      unlitColor: "#171717"
-    },
 
     drainWalls: [
       {
@@ -197,9 +197,14 @@
     ],
 
     bumpers: [
-      { x: 438, y: 551, visualR: 37.5, collisionR: 21, power: 4.5 },
-      { x: 358, y: 441, visualR: 37.5, collisionR: 21, power: 4.5 },
-      { x: 518, y: 441, visualR: 37.5, collisionR: 21, power: 4.5 }
+      {
+        id: "center_bumper",
+        x: 370,
+        y: 323,
+        visualR: 54,
+        collisionR: 44,
+        power: 4.5
+      }
     ],
 
     slingshots: [
@@ -265,59 +270,29 @@
 
     orbit: {
       visualPaths: {
-        wallOrbit: "M88.5,604.5C-139.5,113.5,101.5.3,492,.3",
-        orbitDivider1: "M195.8,386.9c-43.5-144.9-6.7-189.3,121.7-225.4",
-        orbitDivider2: "M140.7,498.8C39.6,232.9,90.5,134.4,296.5,90.5",
-        wallTargetTop:
-          "M740.5.5l-.4,341s3.9-88.6-51.6-136c-55-47-119.9-35.4-119.9-35.4L491.7-.2l248.8.7Z"
+        deflectorLeft: "M78,295c-66,82-59,188-23.8,280.3",
+        deflectorRight: "M662,295c66,82,59,188,23.8,280.3"
       },
       draw: {
         lineWidth: 4
       },
       collisionCurves: [
         {
-          id: "table2_wall_orbit",
-          p0: { x: 88.5, y: 604.5 },
-          p1: { x: -139.5, y: 113.5 },
-          p2: { x: 101.5, y: 0.3 },
-          p3: { x: 492, y: 0.3 },
-          count: 36,
-          r: 5
-        },
-        {
-          id: "table2_orbit_divider_1",
-          p0: { x: 195.8, y: 386.9 },
-          p1: { x: 152.3, y: 242.0 },
-          p2: { x: 189.1, y: 197.6 },
-          p3: { x: 317.5, y: 161.5 },
+          id: "table4_deflector_left",
+          p0: { x: 78, y: 295 },
+          p1: { x: 12, y: 377 },
+          p2: { x: 19, y: 483 },
+          p3: { x: 54.2, y: 575.3 },
           count: 24,
           r: 4
         },
         {
-          id: "table2_orbit_divider_2",
-          p0: { x: 140.7, y: 498.8 },
-          p1: { x: 39.6, y: 232.9 },
-          p2: { x: 90.5, y: 134.4 },
-          p3: { x: 296.5, y: 90.5 },
-          count: 32,
-          r: 4
-        },
-        {
-          id: "table2_wall_target_top_curve_1",
-          p0: { x: 740.1, y: 341.5 },
-          p1: { x: 740.1, y: 341.5 },
-          p2: { x: 744.0, y: 252.9 },
-          p3: { x: 688.5, y: 205.5 },
-          count: 14,
-          r: 4
-        },
-        {
-          id: "table2_wall_target_top_curve_2",
-          p0: { x: 688.5, y: 205.5 },
-          p1: { x: 633.5, y: 158.5 },
-          p2: { x: 568.6, y: 170.1 },
-          p3: { x: 568.6, y: 170.1 },
-          count: 12,
+          id: "table4_deflector_right",
+          p0: { x: 662, y: 295 },
+          p1: { x: 728, y: 377 },
+          p2: { x: 721, y: 483 },
+          p3: { x: 685.8, y: 575.3 },
+          count: 24,
           r: 4
         }
       ],
@@ -328,168 +303,211 @@
       {
         id: "left_drop_target_1",
         group: "leftDrop",
-        x1: 74.6,
-        y1: 679.9,
-        x2: 91.5,
-        y2: 645.5,
+        x1: 53.1,
+        y1: 641.4,
+        x2: 63.6,
+        y2: 602.8,
         r: 5,
         rebound: 1.2
       },
       {
         id: "left_drop_target_2",
         group: "leftDrop",
-        x1: 45.9,
-        y1: 738.4,
-        x2: 62.8,
-        y2: 704,
+        x1: 36.9,
+        y1: 701.3,
+        x2: 47.4,
+        y2: 662.7,
+        r: 5,
+        rebound: 1.2
+      },
+      {
+        id: "left_drop_target_3",
+        group: "leftDrop",
+        x1: 20.6,
+        y1: 761.3,
+        x2: 31.1,
+        y2: 722.7,
         r: 5,
         rebound: 1.2
       },
       {
         id: "right_drop_target_1",
         group: "rightDrop",
-        x1: 681,
-        y1: 690.4,
-        x2: 667.5,
-        y2: 654.5,
+        x1: 686.9,
+        y1: 641.4,
+        x2: 676.4,
+        y2: 602.8,
         r: 5,
         rebound: 1.2
       },
       {
         id: "right_drop_target_2",
         group: "rightDrop",
-        x1: 704,
-        y1: 751.4,
-        x2: 690.5,
-        y2: 715.5,
+        x1: 703.1,
+        y1: 701.3,
+        x2: 692.6,
+        y2: 662.7,
         r: 5,
         rebound: 1.2
       },
       {
-        id: "top_drop_target_1",
-        group: "topDrop",
-        x1: 492.4,
-        y1: 55.5,
-        x2: 478.9,
-        y2: 25.6,
+        id: "right_drop_target_3",
+        group: "rightDrop",
+        x1: 719.4,
+        y1: 761.3,
+        x2: 708.9,
+        y2: 722.7,
         r: 5,
         rebound: 1.2
       },
       {
-        id: "top_drop_target_2",
-        group: "topDrop",
-        x1: 516.4,
-        y1: 108.5,
-        x2: 502.9,
-        y2: 78.6,
+        id: "upper_target_left_1",
+        group: "bonusReady",
+        x1: 92.2,
+        y1: 53.4,
+        x2: 123.4,
+        y2: 27.1,
         r: 5,
-        rebound: 1.2
+        rebound: 2
       },
       {
-        id: "top_drop_target_3",
-        group: "topDrop",
-        x1: 540.4,
-        y1: 161.5,
-        x2: 526.9,
-        y2: 131.6,
+        id: "upper_target_left_2",
+        group: "bonusReady",
+        x1: 25.7,
+        y1: 109.3,
+        x2: 57,
+        y2: 83,
         r: 5,
-        rebound: 1.2
+        rebound: 2
+      },
+      {
+        id: "upper_target_right_1",
+        group: "bonusReady",
+        x1: 647.8,
+        y1: 53.4,
+        x2: 616.6,
+        y2: 27.1,
+        r: 5,
+        rebound: 2
+      },
+      {
+        id: "upper_target_right_2",
+        group: "bonusReady",
+        x1: 714.3,
+        y1: 109.3,
+        x2: 683,
+        y2: 83,
+        r: 5,
+        rebound: 2
       }
     ],
 
     targets: [],
 
-    topLaneDividers: [
-      { id: "top_lane_divider_1", x1: 303.5, y1: 278.7, x2: 303.5, y2: 328.7, r: 3 },
-      { id: "top_lane_divider_2", x1: 393.5, y1: 278.7, x2: 393.5, y2: 328.7, r: 3 },
-      { id: "top_lane_divider_3", x1: 483.5, y1: 278.7, x2: 483.5, y2: 328.7, r: 3 },
-      { id: "top_lane_divider_4", x1: 573.5, y1: 278.7, x2: 573.5, y2: 328.7, r: 3 }
-    ],
-
-    topLanes: [
-      {
-        id: "top_lane_1",
-        indicator: { x: 348, y: 304, r: 13 },
-        trigger: { x1: 316, y1: 304, x2: 380, y2: 304, r: 4 }
-      },
-      {
-        id: "top_lane_2",
-        indicator: { x: 438, y: 304, r: 13 },
-        trigger: { x1: 406, y1: 304, x2: 470, y2: 304, r: 4 }
-      },
-      {
-        id: "top_lane_3",
-        indicator: { x: 529, y: 304, r: 13 },
-        trigger: { x1: 497, y1: 304, x2: 561, y2: 304, r: 4 }
-      }
-    ],
-
-    orbitLaneTriggers: [
-      {
-        id: "outer_orbit_trigger",
-        x: 171.5,
-        y: 88.5,
-        r: 30,
-        score: 25,
-        label: "outer orbit"
-      },
-      {
-        id: "inner_orbit_trigger",
-        x: 206.5,
-        y: 163.5,
-        r: 30,
-        score: 25,
-        label: "inner orbit"
-      }
-    ],
-
-    loopRoute: {
-      score: 100,
-      timeoutMs: 1300,
-      triggers: [
-        {
-          id: "loop_start_trigger",
-          x: 245.5,
-          y: 238.5,
-          r: 30
-        },
-        {
-          id: "loop_mid_trigger",
-          x: 454.5,
-          y: 212.5,
-          r: 30
-        },
-        {
-          id: "loop_trigger",
-          x: 697.5,
-          y: 308.5,
-          r: 30
-        }
-      ],
-      sequences: [
-        [0, 1, 2],
-        [2, 1, 0]
-      ]
-    },
+    topLaneDividers: [],
+    topLanes: [],
+    orbitLaneTriggers: [],
 
     spinners: [
       {
+        id: "spinner_left",
+        rect: {
+          x: 59.3,
+          y: 513.1,
+          w: 70,
+          h: 10,
+          angleDeg: -20
+        }
+      },
+      {
         id: "spinner_right",
         rect: {
-          x: 632,
-          y: 548,
-          w: 10,
-          h: 60,
-          angleDeg: -75
+          x: 610.7,
+          y: 513.1,
+          w: 70,
+          h: 10,
+          angleDeg: 20
         }
+      }
+    ],
+
+    saucerBonusLevels: [
+      { level: 1, requiredDownCount: 2, baseScore: 200, color: "#7f8" },
+      { level: 2, requiredDownCount: 3, baseScore: 500, color: "#64f" },
+      { level: 3, requiredDownCount: 4, baseScore: 1000, color: "#f55" }
+    ],
+
+    bonusPowerLevelUpScores: [
+      { multiplier: 1.2, score: 20 },
+      { multiplier: 1.4, score: 50 },
+      { multiplier: 1.6, score: 100 },
+      { multiplier: 1.8, score: 150 },
+      { multiplier: 2, score: 200 }
+    ],
+
+    dropTargetCompletionBonuses: [
+      {
+        id: "upper_left_pair",
+        targetIds: ["upper_target_left_1", "upper_target_left_2"],
+        score: 50
+      },
+      {
+        id: "upper_right_pair",
+        targetIds: ["upper_target_right_1", "upper_target_right_2"],
+        score: 50
+      },
+      {
+        id: "upper_all",
+        targetIds: [
+          "upper_target_left_1",
+          "upper_target_left_2",
+          "upper_target_right_1",
+          "upper_target_right_2"
+        ],
+        score: 200
+      }
+    ],
+
+    saucers: [
+      {
+        id: "upper_saucer",
+        x: 370,
+        y: 127,
+        r: 28,
+        requiredDropTargetGroup: "bonusReady",
+        requiredDropTargetCount: 2,
+        bonusCollectMultiplier: 2,
+        unreadyScore: 20,
+        lightR: 26,
+        unreadyHoldMs: 200,
+        holdMs: 1200,
+        releaseVx: 3,
+        releaseRandomDirection: true,
+        releaseVy: 2
+      },
+      {
+        id: "lower_saucer",
+        x: 370,
+        y: 546,
+        r: 28,
+        requiredDropTargetGroup: "bonusReady",
+        requiredDropTargetCount: 2,
+        bonusCollectMultiplier: 1,
+        unreadyScore: 10,
+        lightR: 26,
+        unreadyHoldMs: 200,
+        holdMs: 1200,
+        releaseVx: 3,
+        releaseRandomDirection: true,
+        releaseVy: 2
       }
     ],
 
     spawn: {
-      x: 703,
-      y: 478,
-      launchPowerMin: 19,
-      launchPowerMax: 22.5
+      x: 670,
+      y: 470,
+      launchPowerMin: 16,
+      launchPowerMax: 20
     },
 
     kickbacks: [
@@ -501,8 +519,8 @@
         x2: 16,
         y2: 928,
         r: 18,
-        color: "#88e",
-        activeColor: "#88e",
+        color: "#f55",
+        activeColor: "#f55",
         triggerGroups: ["leftDrop"],
         durationMs: 8000,
         powerX: 10,
@@ -516,8 +534,8 @@
         x2: 690,
         y2: 928,
         r: 18,
-        color: "#88e",
-        activeColor: "#88e",
+        color: "#f55",
+        activeColor: "#f55",
         triggerGroups: ["leftDrop"],
         durationMs: 8000,
         powerX: -10,
@@ -533,8 +551,8 @@
         x2: 405,
         y2: 1245,
         r: 18,
-        color: "#88e",
-        activeColor: "#88e",
+        color: "#f55",
+        activeColor: "#f55",
         triggerGroups: ["rightDrop"],
         durationMs: 8000,
         powerX: 0,
@@ -545,9 +563,10 @@
     visual: {
       lineWidth: 4,
       colors: {
-        flipper: "#c4a",
-        scoreFlash: "#3fe",
-        bumperFlashLevel1: "#88e"
+        flipper: "#0ab",
+        scoreFlash: "#f55",
+        bumperFlashLevel1: "#f55",
+        bumperFlashLevel2: "#f55"
       }
     }
   };

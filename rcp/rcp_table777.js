@@ -6,6 +6,7 @@
   window.RCP_TABLES.table777 = {
     id: "table777",
     label: "Table 777",
+    secondChance: { enabled: true },
 
     assets: {
       playfieldLogo: true,
@@ -707,7 +708,7 @@
     visual: {
       lineWidth: 4,
       colors: {
-        flipper: "#b12",
+        flipper: "#34c",
         scoreFlash: "#af8",
         comboLit: "#f83"
       }

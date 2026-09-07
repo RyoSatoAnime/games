@@ -5,7 +5,8 @@
 
   window.RCP_TABLES.table1 = {
       id: "table1",
-      label: "TABLE 1",
+      label: "Table 1",
+      secondChance: { enabled: true },
 
       assets: {
         playfieldLogo: {

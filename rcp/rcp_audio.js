@@ -51,6 +51,7 @@
   function setMasterVolume(value) {
     const v = Number(value);
     masterVolume = Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : DEFAULT_MASTER_VOLUME;
+    if (bgmVoice?.gain) bgmVoice.gain.gain.value = bgmVoice.muted ? 0 : masterVolume * bgmVoice.def.volume;
   }
 
   // ============================================================================
@@ -286,7 +287,22 @@
     featureConsumed: "replace",
     slotStop: "replace",
     tableSelect: "replace",
-    nudge: "replace"
+    nudge: "replace",
+    push2: "replace",
+    push1: "replace",
+    push3: "replace",
+    turnBack: "replace",
+    waveBlast: "replace",
+    miniBlast: "replace",
+    damage: "replace",
+    descent: "replace",
+    positioning: "replace"
+  };
+
+  const ONE_SHOT_MONO_GROUP = {
+    push1: "push",
+    push2: "push",
+    push3: "push"
   };
 
   const lastPlayedAtById = Object.create(null);
@@ -303,6 +319,32 @@
       data[i] = Math.random() * 2 - 1;
     }
     return oneShotNoiseBuffer;
+  }
+
+  function createRateNoiseBuffer(duration, rateStart, rateEnd) {
+    if (!audioCtx) return null;
+
+    const sampleRate = audioCtx.sampleRate;
+    const len = Math.max(1, Math.ceil(sampleRate * Math.max(duration, 0.001)));
+    const buffer = audioCtx.createBuffer(1, len, sampleRate);
+    const data = buffer.getChannelData(0);
+    const start = Math.max(1, Math.min(sampleRate, rateStart));
+    const end = Math.max(1, Math.min(sampleRate, rateEnd));
+    let phase = 1;
+    let value = 0;
+
+    for (let i = 0; i < len; i++) {
+      const progress = len > 1 ? i / (len - 1) : 0;
+      const rate = start * Math.pow(end / start, progress);
+      phase += rate / sampleRate;
+      if (phase >= 1) {
+        phase -= Math.floor(phase);
+        value = Math.random() * 2 - 1;
+      }
+      data[i] = value;
+    }
+
+    return buffer;
   }
 
   // ============================================================================
@@ -668,6 +710,10 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
     const wave = getSafeString(osc.wave, OSC_WAVES, "sine");
     const freq = getSafeNumber(osc.freq, 440, 20, 12000);
     const filterFreq = getSafeNumber(filter.freq, 1000, 20, 12000);
+    const hasNoiseRate = Number.isFinite(Number(noise.rate));
+    const noiseRate = hasNoiseRate
+      ? getSafeNumber(noise.rate, audioCtx?.sampleRate || 48000, 1, 48000)
+      : null;
 
     const normalizedOsc = {
       wave,
@@ -687,7 +733,11 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
       type,
       osc: normalizedOsc,
       noise: {
-        volume: getSafeNumber(noise.volume, 0, 0, 1)
+        volume: getSafeNumber(noise.volume, 0, 0, 1),
+        rate: noiseRate,
+        rateEnd: noiseRate == null
+          ? null
+          : getSafeNumber(noise.rateEnd, noiseRate, 1, 48000)
       },
       filter: {
         type: getSafeString(filter.type, FILTER_TYPES, "none"),
@@ -766,7 +816,15 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
       }
 
       if (normalized.type === "noise" || normalized.type === "mix") {
-        const buffer = getOneShotNoiseBuffer();
+        // Definitions without noise.rate retain the original shared white-noise
+        // buffer. Only opted-in definitions use the variable-rate generator.
+        const buffer = normalized.noise.rate == null
+          ? getOneShotNoiseBuffer()
+          : createRateNoiseBuffer(
+              duration + 0.02,
+              normalized.noise.rate,
+              normalized.noise.rateEnd
+            );
         if (buffer) {
           const source = audioCtx.createBufferSource();
           source.buffer = buffer;
@@ -817,8 +875,14 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
 
     if (voice.gain?.gain) {
       try {
-        voice.gain.gain.cancelScheduledValues(t);
-        voice.gain.gain.setValueAtTime(voice.gain.gain.value, t);
+        const gain = voice.gain.gain;
+        if (typeof gain.cancelAndHoldAtTime === "function") {
+          gain.cancelAndHoldAtTime(t);
+        } else {
+          const value = gain.value;
+          gain.cancelScheduledValues(t);
+          gain.setValueAtTime(value, t);
+        }
         voice.gain.gain.linearRampToValueAtTime(0.0001, t + fadeTime);
       } catch {
         // ignore
@@ -955,6 +1019,7 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
 
   function play(soundId, options = {}) {
     if (options.muted) return;
+    if (soundId === "dropTarget" && activeMelodyVoice) return;
     if (!ensure()) return;
 
     const player = ONE_SHOT_PLAYERS[soundId];
@@ -965,8 +1030,9 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
     const t = audioCtx.currentTime;
     if (!canPlayOneShot(soundId, t)) return;
 
+    const voiceKey = ONE_SHOT_MONO_GROUP[soundId] || soundId;
     if (ONE_SHOT_MONO_MODE[soundId] === "replace") {
-      stopActiveOneShot(soundId, t);
+      stopActiveOneShot(voiceKey, t);
     }
 
     lastPlayedAtById[soundId] = t;
@@ -979,7 +1045,7 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
       voice = player(t, options);
     }
     if (voice) {
-      registerOneShotVoice(soundId, voice);
+      registerOneShotVoice(voiceKey, voice);
     }
   }
 
@@ -1259,19 +1325,25 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
     return def;
   }
 
-  function scheduleMelodyVoice(def, voice, isTokenCurrent, destinationNode) {
+  function scheduleMelodyVoice(def, voice, isTokenCurrent, destinationNode, startAt = audioCtx.currentTime) {
     const instrument = def.instrument;
     const notes = def.notes;
     const secondsPerBeat = 60 / Number(def.bpm);
-    const filterType = instrument.filter?.type || "none";
-    const filterFreq = Number(instrument.filter?.freq);
-    const filterQ = Number(instrument.filter?.q);
-    const baseVolume = Number(instrument.volume);
-    const attack = Number(instrument.attack);
-    const gate = Number(instrument.gate);
-    const release = Number(instrument.release);
+    const layerDefs = Array.isArray(instrument.layers)
+      ? instrument.layers.filter(layer => layer && typeof layer === "object")
+      : [];
+    const instruments = [
+      instrument,
+      ...layerDefs.map(layer => ({
+        ...instrument,
+        ...layer,
+        filter: layer.filter ?? instrument.filter,
+        wave32: layer.wave32 ?? instrument.wave32,
+        layers: undefined
+      }))
+    ];
 
-    let cursor = audioCtx.currentTime;
+    let cursor = startAt;
 
     for (let i = 0; i < notes.length; i++) {
       if (!isTokenCurrent()) return;
@@ -1297,57 +1369,70 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
 
       const velocity = Number(entry.velocity);
       const velocityScale = 0.75 + ((Number.isFinite(velocity) ? velocity : 100) / 127) * 0.25;
-      const peak =
-        (Number.isFinite(baseVolume) ? baseVolume : 0.05) *
-        velocityScale *
-        masterVolume;
-
-      const noteStart = cursor;
-      const attackEnd =
-        noteStart + Math.min(Number.isFinite(attack) ? attack : 0.004, stepDuration * 0.5);
-      const gateEnd =
-        noteStart +
-        Math.max(
-          Number.isFinite(attack) ? attack : 0.004,
-          stepDuration * (Number.isFinite(gate) ? gate : 0.88)
+      for (const layerInstrument of instruments) {
+        const filterType = layerInstrument.filter?.type || "none";
+        const filterFreq = Number(layerInstrument.filter?.freq);
+        const filterQ = Number(layerInstrument.filter?.q);
+        const baseVolume = Number(layerInstrument.volume);
+        const attack = Number(layerInstrument.attack);
+        const gate = Number(layerInstrument.gate);
+        const release = Number(layerInstrument.release);
+        const detune = Number(layerInstrument.detune);
+        const delayMs = Number(layerInstrument.delayMs);
+        const noteStart = cursor + (
+          Number.isFinite(delayMs) ? Math.max(0, delayMs) / 1000 : 0
         );
-      const releaseEnd = Math.min(
-        noteStart + stepDuration,
-        gateEnd + (Number.isFinite(release) ? release : 0.04)
-      );
+        const peak =
+          (Number.isFinite(baseVolume) ? baseVolume : 0.05) *
+          velocityScale *
+          masterVolume;
+        const attackEnd =
+          noteStart + Math.min(Number.isFinite(attack) ? attack : 0.004, stepDuration * 0.5);
+        const gateEnd =
+          noteStart +
+          Math.max(
+            Number.isFinite(attack) ? attack : 0.004,
+            stepDuration * (Number.isFinite(gate) ? gate : 0.88)
+          );
+        const releaseEnd = Math.min(
+          noteStart + stepDuration,
+          gateEnd + (Number.isFinite(release) ? release : 0.04)
+        );
 
-      try {
-        const osc = audioCtx.createOscillator();
-        applyMelodyWave(osc, instrument);
-        osc.frequency.setValueAtTime(midiNoteToFrequency(note), noteStart);
+        try {
+          const osc = audioCtx.createOscillator();
+          applyMelodyWave(osc, layerInstrument);
+          osc.frequency.setValueAtTime(midiNoteToFrequency(note), noteStart);
+          osc.detune.setValueAtTime(Number.isFinite(detune) ? detune : 0, noteStart);
 
-        const gain = audioCtx.createGain();
-        gain.gain.setValueAtTime(0, noteStart);
-        gain.gain.linearRampToValueAtTime(peak, attackEnd);
-        gain.gain.setValueAtTime(peak, gateEnd);
-        gain.gain.linearRampToValueAtTime(0, releaseEnd);
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(0, noteStart);
+          gain.gain.linearRampToValueAtTime(peak, attackEnd);
+          gain.gain.setValueAtTime(peak, gateEnd);
+          gain.gain.linearRampToValueAtTime(0, releaseEnd);
 
-        if (filterType === "none") {
-          osc.connect(gain);
-        } else {
-          const filterNode = audioCtx.createBiquadFilter();
-          filterNode.type = filterType;
-          filterNode.frequency.value = Number.isFinite(filterFreq) ? filterFreq : 1200;
-          filterNode.Q.value = Number.isFinite(filterQ) ? filterQ : 1;
-          osc.connect(filterNode);
-          filterNode.connect(gain);
+          if (filterType === "none") {
+            osc.connect(gain);
+          } else {
+            const filterNode = audioCtx.createBiquadFilter();
+            filterNode.type = filterType;
+            filterNode.frequency.value = Number.isFinite(filterFreq) ? filterFreq : 1200;
+            filterNode.Q.value = Number.isFinite(filterQ) ? filterQ : 1;
+            osc.connect(filterNode);
+            filterNode.connect(gain);
+          }
+
+          gain.connect(destinationNode);
+
+          const stopAt = noteStart + stepDuration + 0.02;
+          osc.start(noteStart);
+          osc.stop(stopAt);
+
+          voice.oscillators.push(osc);
+          voice.gains.push(gain);
+        } catch {
+          // ignore individual note failures
         }
-
-        gain.connect(destinationNode);
-
-        const stopAt = noteStart + stepDuration + 0.02;
-        osc.start(noteStart);
-        osc.stop(stopAt);
-
-        voice.oscillators.push(osc);
-        voice.gains.push(gain);
-      } catch {
-        // ignore individual note failures
       }
 
       cursor += stepDuration;
@@ -1393,6 +1478,11 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
       return;
     }
 
+    // Finish the preceding target hit smoothly before starting the melody.
+    const targetFadeSec = activeOneShotVoices.dropTarget ? 0.008 : 0;
+    if (targetFadeSec > 0) {
+      stopActiveOneShot("dropTarget", audioCtx.currentTime, 0.006);
+    }
     stopForegroundMelody();
     setBackgroundMelodyAudible(false);
 
@@ -1404,7 +1494,7 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
     };
     activeMelodyVoice = voice;
 
-    scheduleMelodyVoice(def, voice, () => melodyPlaybackToken === token, audioCtx.destination);
+    scheduleMelodyVoice(def, voice, () => melodyPlaybackToken === token, audioCtx.destination, audioCtx.currentTime + targetFadeSec);
 
     if (activeMelodyVoice === voice && voice.oscillators.length > 0) {
       const lastOsc = voice.oscillators[voice.oscillators.length - 1];
@@ -1424,9 +1514,198 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
   // Public API
   // ============================================================================
 
+  // Short look-ahead scheduling uses real audio seconds, never game dt.
+  let bgmVoice = null;
+  let completedBgmTiming = null;
+
+  function scheduleBgmNote(voice, event, when) {
+    const { tone, note } = event;
+    const [start, duration, pitch, velocity] = note;
+    let level = tone.volume * velocity / 127;
+    for (const range of tone.velocityRanges || []) {
+      if (start >= range.from && start < range.to) level *= range.scale;
+    }
+    const gain = audioCtx.createGain();
+    const nodes = [gain];
+    const sources = [];
+    gain.connect(voice.gain);
+    let source, hold, end;
+    if (tone.wave === "noise") {
+      hold = tone.short ? tone.attack + tone.decay
+        : Math.max(tone.attack + tone.decay, duration * tone.gate);
+      end = hold + tone.release;
+      const buffer = audioCtx.createBuffer(1, Math.ceil(end * audioCtx.sampleRate), audioCtx.sampleRate);
+      const samples = buffer.getChannelData(0);
+      let seed = (event.index + 1) * 2654435761 >>> 0;
+      let previous = -1, value = 0;
+      for (let i = 0; i < samples.length; i++) {
+        const step = Math.floor(i * tone.noiseRate / audioCtx.sampleRate);
+        if (step !== previous) {
+          seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
+          value = (seed >>> 0) / 2147483648 - 1;
+          previous = step;
+        }
+        samples[i] = value;
+      }
+      source = audioCtx.createBufferSource();
+      source.buffer = buffer;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = tone.filter.type;
+      filter.frequency.value = tone.filter.freq;
+      filter.Q.value = tone.filter.q;
+      nodes.push(filter);
+      source.connect(filter);
+      filter.connect(gain);
+      gain.gain.setValueAtTime(0, when);
+      gain.gain.linearRampToValueAtTime(level, when + tone.attack);
+      gain.gain.linearRampToValueAtTime(level * tone.sustain, when + tone.attack + tone.decay);
+      gain.gain.setValueAtTime(level * tone.sustain, when + hold);
+      gain.gain.linearRampToValueAtTime(0, when + end);
+    } else if (tone.wave === "kick") {
+      end = tone.duration;
+      source = audioCtx.createOscillator();
+      source.type = "sine";
+      source.frequency.setValueAtTime(tone.freq + tone.sweep, when);
+      source.frequency.setTargetAtTime(tone.freq, when, tone.pitchDecay);
+      source.connect(gain);
+      gain.gain.setValueAtTime(0, when);
+      gain.gain.linearRampToValueAtTime(level * Math.exp(-tone.attack / tone.decay), when + tone.attack);
+      gain.gain.exponentialRampToValueAtTime(Math.max(0.000001, level * Math.exp(-(end - .003) / tone.decay)), when + end - .003);
+      gain.gain.linearRampToValueAtTime(0, when + end);
+    } else {
+      hold = Math.max(tone.attack, duration * tone.gate);
+      end = hold + tone.release;
+      source = audioCtx.createOscillator();
+      applyMelodyWave(source, tone);
+      const frequency = midiNoteToFrequency(pitch);
+      source.frequency.setValueAtTime(frequency, when);
+      source.connect(gain);
+      if (tone.vibratoRate && tone.vibratoDepthRatio) {
+        const vibrato = audioCtx.createOscillator();
+        const depth = audioCtx.createGain();
+        vibrato.frequency.value = tone.vibratoRate;
+        depth.gain.value = frequency * tone.vibratoDepthRatio;
+        vibrato.connect(depth);
+        depth.connect(source.frequency);
+        nodes.push(depth);
+        sources.push(vibrato);
+      }
+      gain.gain.setValueAtTime(0, when);
+      gain.gain.linearRampToValueAtTime(level, when + tone.attack);
+      gain.gain.setValueAtTime(level, when + hold);
+      gain.gain.linearRampToValueAtTime(0, when + end);
+    }
+    sources.push(source);
+    const active = { sources, nodes };
+    voice.active.add(active);
+    source.onended = () => {
+      voice.active.delete(active);
+      for (const node of [...sources, ...nodes]) node.disconnect();
+    };
+    for (const node of sources) {
+      node.start(when);
+      node.stop(when + end);
+    }
+  }
+
+  function clearBgmNotes(voice) {
+    for (const active of voice.active) {
+      for (const source of active.sources) {
+        source.onended = null;
+        try { source.stop(); } catch { /* Already ended. */ }
+        source.disconnect();
+      }
+      for (const node of active.nodes) node.disconnect();
+    }
+    voice.active.clear();
+  }
+
+  function stopBgm() {
+    completedBgmTiming = null;
+    if (!bgmVoice) return;
+    clearInterval(bgmVoice.timer);
+    clearBgmNotes(bgmVoice);
+    bgmVoice.gain.disconnect();
+    bgmVoice = null;
+  }
+
+  function scheduleBgm(voice) {
+    if (bgmVoice !== voice || voice.paused) return;
+    const position = audioCtx.currentTime - voice.origin;
+    if (position >= voice.def.duration) {
+      const durationMs = voice.def.duration * 1000;
+      stopBgm();
+      // Keep completion visible until the game's next update consumes it.
+      completedBgmTiming = { elapsedMs: durationMs, durationMs, ended: true };
+      return;
+    }
+    while (voice.cursor < voice.events.length) {
+      const event = voice.events[voice.cursor];
+      if (event.note[0] > position + .12) break;
+      voice.cursor++;
+      // Skip stale notes after a blocked event loop instead of playing a burst.
+      if (event.note[0] < position - .05) continue;
+      scheduleBgmNote(voice, event, Math.max(audioCtx.currentTime, voice.origin + event.note[0]));
+    }
+  }
+
+  function playBgm(id, options = {}) {
+    stopBgm();
+    const def = window.RCP_BGM_DEFS?.[id];
+    if (!def || !ensure()) return;
+    unlock();
+    const gain = audioCtx.createGain();
+    gain.gain.value = options.muted ? 0 : masterVolume * def.volume;
+    gain.connect(audioCtx.destination);
+    const events = [];
+    for (const track of def.tracks) {
+      for (const note of track.notes) {
+        const tone = track.drums ? track.drums[note[2]] : track.instrument;
+        if (tone) events.push({ tone, note, index: events.length });
+      }
+    }
+    events.sort((a, b) => a.note[0] - b.note[0]);
+    const voice = { def, gain, events, muted: !!options.muted, cursor: 0, active: new Set(), paused: false,
+      position: 0, origin: audioCtx.currentTime, timer: null };
+    bgmVoice = voice;
+    scheduleBgm(voice);
+    voice.timer = setInterval(() => scheduleBgm(voice), 25);
+  }
+
+  function getBgmTiming() {
+    if (!bgmVoice) return completedBgmTiming;
+    const durationMs = bgmVoice.def.duration * 1000;
+    const elapsedMs = Math.min(durationMs, Math.max(0,
+      (bgmVoice.paused ? bgmVoice.position : audioCtx.currentTime - bgmVoice.origin) * 1000));
+    return { elapsedMs, durationMs, ended: elapsedMs >= durationMs };
+  }
+
+  function setBgmPaused(paused) {
+    const voice = bgmVoice;
+    if (!voice || voice.paused === !!paused) return;
+    voice.paused = !!paused;
+    if (voice.paused) {
+      voice.position = Math.max(0, audioCtx.currentTime - voice.origin);
+      clearInterval(voice.timer);
+      clearBgmNotes(voice);
+      // Requeue future notes that were scheduled ahead; omit notes already sounding.
+      voice.cursor = voice.events.findIndex(event => event.note[0] >= voice.position);
+      if (voice.cursor < 0) voice.cursor = voice.events.length;
+    } else {
+      unlock();
+      voice.origin = audioCtx.currentTime - voice.position;
+      scheduleBgm(voice);
+      if (bgmVoice === voice) voice.timer = setInterval(() => scheduleBgm(voice), 25);
+    }
+  }
+
   window.RCPAudio = {
     unlock,
     warmup,
+    playBgm,
+    stopBgm,
+    setBgmPaused,
+    getBgmTiming,
     updateBallRoll,
     stopBallRoll,
     setMasterVolume,
@@ -1434,6 +1713,7 @@ Object.assign(window.RCP_AUDIO_SFX_DEFS, {
     playSpinnerStep,
     play,
     playMelody,
+    isMelodyPlaying: () => activeMelodyVoice !== null,
     stopMelody,
     stopBoostedMelody: stopBackgroundMelody,
     startSlotSpin,
